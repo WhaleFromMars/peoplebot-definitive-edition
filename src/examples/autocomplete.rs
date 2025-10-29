@@ -1,13 +1,7 @@
 use crate::prelude::*;
 use std::fmt::Write as _;
 
-inventory::submit! {
-    CommandRegistry(commands)
-}
-
-fn commands() -> Vec<Command<GlobalState, Error>> {
-    vec![greet()]
-}
+register_commands!(greet);
 
 async fn autocomplete_name(_ctx: Context<'_>, partial: &str) -> CreateAutocompleteResponse {
     let choices = ["Amanda", "Bob", "Christian", "Danny", "Ester", "Falk"]

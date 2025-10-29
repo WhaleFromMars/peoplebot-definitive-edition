@@ -1,13 +1,7 @@
 //https://github.com/serenity-rs/poise/blob/next/examples/feature_showcase/attachment_parameter.rs
 use crate::prelude::*;
 
-inventory::submit! {
-    CommandRegistry(commands)
-}
-
-fn commands() -> Vec<Command<GlobalState, Error>> {
-    vec![file_details(), totalsize()]
-}
+register_commands!(file_details, totalsize);
 
 #[command(prefix_command, slash_command)]
 pub async fn file_details(

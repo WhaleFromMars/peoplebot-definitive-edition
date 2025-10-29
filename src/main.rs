@@ -1,7 +1,8 @@
 use crate::prelude::*;
 use dotenvy::dotenv;
+use futures::future::try_join_all;
 use logging::init_logging;
-use poise::{Framework, FrameworkContext, FrameworkOptions};
+use poise::{Framework, FrameworkOptions};
 
 mod embedder;
 #[cfg(debug_assertions)]
@@ -66,18 +67,15 @@ fn init_framework() -> Framework<GlobalState, Error> {
 }
 
 async fn event_handler(
-    framework: FrameworkContext<'_, GlobalState, Error>,
+    ctx: FrameworkContext<'_, GlobalState, Error>,
     event: &FullEvent,
 ) -> Result<(), Error> {
-    match event {
-        FullEvent::Ready { data_about_bot } => {
-            info!("Logged in as {}", data_about_bot.user.name);
-        }
-        FullEvent::CacheReady { guilds } => {
-            info!("Loaded {} guilds", guilds.len());
-        }
-        _ => {}
-    }
+    let futures = inventory::iter::<EventListener>
+        .into_iter()
+        .map(|listener| (listener.handle)(ctx, event))
+        .collect::<Vec<_>>();
+
+    try_join_all(futures).await?;
     Ok(())
 }
 
