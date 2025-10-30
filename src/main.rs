@@ -2,27 +2,30 @@ use crate::prelude::*;
 use dotenvy::dotenv;
 use futures::future::try_join_all;
 use logging::init_logging;
+use model::StartupListener;
 use poise::{Framework, FrameworkOptions};
 
 mod embedder;
 #[cfg(debug_assertions)]
 mod examples;
 mod logging;
+mod macros;
 mod model;
 pub mod prelude;
+
+#[cfg(debug_assertions)]
+const TOKEN_ENV: &str = "DEV_DISCORD_TOKEN";
+#[cfg(not(debug_assertions))]
+const TOKEN_ENV: &str = "PROD_DISCORD_TOKEN";
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     dotenv().ok();
     init_logging();
 
-    #[cfg(debug_assertions)]
-    let token =
-        env::var("DEV_DISCORD_TOKEN").expect("env variable DEV_DISCORD_TOKEN should be set");
+    let token = env::var(TOKEN_ENV).expect("Environment variable {TOKEN_ENV} must be set");
 
-    #[cfg(not(debug_assertions))]
-    let token =
-        env::var("PROD_DISCORD_TOKEN").expect("env variable PROD_DISCORD_TOKEN should be set");
+    fire_startup_events().await?;
 
     let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES;
     let framework = init_framework();
@@ -64,6 +67,16 @@ fn init_framework() -> Framework<GlobalState, Error> {
             })
         })
         .build()
+}
+
+async fn fire_startup_events() -> Result<(), Error> {
+    let futures = inventory::iter::<StartupListener>
+        .into_iter()
+        .map(|listener| (listener.handle)())
+        .collect::<Vec<_>>();
+
+    try_join_all(futures).await?;
+    Ok(())
 }
 
 async fn event_handler(
