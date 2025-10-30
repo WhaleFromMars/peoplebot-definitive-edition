@@ -21,7 +21,7 @@ pub async fn file_details(
 #[command(prefix_command)]
 pub async fn totalsize(
     ctx: Context<'_>,
-    #[description = "File to rename"] files: Vec<Attachment>,
+    #[description = "Files to evaluate"] files: Vec<Attachment>,
 ) -> Result<(), Error> {
     let total = files.iter().map(|f| f.size as u64).sum::<u64>();
 
