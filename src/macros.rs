@@ -4,7 +4,7 @@ macro_rules! register_commands {
       ($($command:path),+ $(,)?) => {
           const _: () = {
               fn __peoplebot_command_list() -> Vec<
-                  poise::Command<$crate::model::GlobalState, $crate::model::Error>
+                  poise::Command<$crate::model::GlobalState, $crate::prelude::Error>
               > {
                   vec![$($command()),+]
               }
@@ -22,9 +22,9 @@ macro_rules! register_event_listener {
     ($handler:path) => {
         const _: () = {
             fn __peoplebot_event_wrapper<'a>(
-                ctx: poise::FrameworkContext<'a, $crate::model::GlobalState, $crate::model::Error>,
+                ctx: poise::FrameworkContext<'a, $crate::model::GlobalState, $crate::prelude::Error>,
                 event: &'a poise::serenity_prelude::FullEvent,
-            ) -> ::futures::future::BoxFuture<'a, Result<(), $crate::model::Error>> {
+            ) -> ::futures::future::BoxFuture<'a, $crate::prelude::Result<()>> {
                 async move { $handler(ctx, event).await }.boxed()
             }
 
@@ -43,7 +43,7 @@ macro_rules! register_startup_listener {
     ($handler:path) => {
         const _: () = {
             fn __peoplebot_startup_wrapper()
-            -> ::futures::future::BoxFuture<'static, Result<(), $crate::model::Error>> {
+            -> ::futures::future::BoxFuture<'static, $crate::prelude::Result<()>> {
                 async move { $handler().await }.boxed()
             }
 

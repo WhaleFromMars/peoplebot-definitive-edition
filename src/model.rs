@@ -3,7 +3,6 @@ use futures::future::BoxFuture;
 
 use crate::prelude::*;
 
-pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, GlobalState, Error>;
 
 #[derive(new)]
@@ -13,7 +12,7 @@ pub struct CommandRegistry(pub fn() -> Vec<Command<GlobalState, Error>>);
 
 inventory::collect!(CommandRegistry);
 
-pub type StartupListenerFn = fn() -> BoxFuture<'static, Result<(), Error>>;
+pub type StartupListenerFn = fn() -> BoxFuture<'static, Result<()>>;
 
 pub struct StartupListener {
     pub handle: StartupListenerFn,
@@ -24,7 +23,7 @@ inventory::collect!(StartupListener);
 pub type EventHandlerFn = for<'a> fn(
     FrameworkContext<'a, GlobalState, Error>,
     &'a FullEvent,
-) -> BoxFuture<'a, Result<(), Error>>;
+) -> BoxFuture<'a, Result<()>>;
 
 pub struct EventListener {
     pub handle: EventHandlerFn,

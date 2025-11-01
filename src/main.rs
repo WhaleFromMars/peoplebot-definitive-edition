@@ -19,7 +19,7 @@ const TOKEN_ENV: &str = "DEV_DISCORD_TOKEN";
 const TOKEN_ENV: &str = "PROD_DISCORD_TOKEN";
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() -> Result<()> {
     dotenv().ok();
     init_logging();
 
@@ -69,7 +69,7 @@ fn init_framework() -> Framework<GlobalState, Error> {
         .build()
 }
 
-async fn fire_startup_events() -> Result<(), Error> {
+async fn fire_startup_events() -> Result<()> {
     let futures = inventory::iter::<StartupListener>
         .into_iter()
         .map(|listener| (listener.handle)())
@@ -82,7 +82,7 @@ async fn fire_startup_events() -> Result<(), Error> {
 async fn event_handler(
     ctx: FrameworkContext<'_, GlobalState, Error>,
     event: &FullEvent,
-) -> Result<(), Error> {
+) -> Result<()> {
     let futures = inventory::iter::<EventListener>
         .into_iter()
         .map(|listener| (listener.handle)(ctx, event))

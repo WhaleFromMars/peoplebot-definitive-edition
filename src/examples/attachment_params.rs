@@ -8,7 +8,7 @@ pub async fn file_details(
     ctx: Context<'_>,
     #[description = "File to examine"] file: Attachment,
     #[description = "Second file to examine"] file_2: Option<Attachment>,
-) -> Result<(), Error> {
+) -> Result<()> {
     ctx.say(format!(
         "First file name: **{}**. File size difference: **{}** bytes",
         file.filename,
@@ -22,7 +22,7 @@ pub async fn file_details(
 pub async fn totalsize(
     ctx: Context<'_>,
     #[description = "Files to evaluate"] files: Vec<Attachment>,
-) -> Result<(), Error> {
+) -> Result<()> {
     let total = files.iter().map(|f| f.size as u64).sum::<u64>();
 
     ctx.say(format!(

@@ -35,7 +35,7 @@ pub async fn greet(
     #[description = "A number... idk I wanted to test number autocomplete"]
     #[autocomplete = "autocomplete_number"]
     number: Option<u32>,
-) -> Result<(), Error> {
+) -> Result<()> {
     let mut response = format!("Hello {}", name);
     if let Some(number) = number {
         let _ = write!(response, "#{}", number);
