@@ -3,15 +3,12 @@ use dotenvy::dotenv;
 use futures::future::{join_all, try_join_all};
 use model::{EnvRequirement, EnvValidationError, StartupListener};
 use poise::{Framework, FrameworkOptions};
-use tracing::init_tracing;
+use tracing_subscriber::{EnvFilter, filter::LevelFilter, fmt};
 
-mod embedder;
-#[cfg(debug_assertions)]
-mod examples;
 mod macros;
 mod model;
+mod modules;
 pub mod prelude;
-mod tracing;
 
 register_env!(DISCORD_TOKEN, String);
 register_env!(DEV_GUILD_ID, GuildId);
@@ -57,7 +54,9 @@ fn init_framework() -> Framework<GlobalState, Error> {
                 #[cfg(not(debug_assertions))]
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
-                Ok(GlobalState::new())
+                Ok(GlobalState {
+                    ..Default::default()
+                })
             })
         })
         .build()
@@ -110,4 +109,34 @@ fn collect_commands() -> Vec<Command<GlobalState, Error>> {
         .into_iter()
         .flat_map(|p| p.0())
         .collect()
+}
+
+#[cfg(not(debug_assertions))]
+const DEFAULT_FILTER_DIRECTIVES: &str = "peoplebot=info,poise=info,serenity=info,tokio=warn";
+#[cfg(debug_assertions)]
+const DEFAULT_FILTER_DIRECTIVES: &str = "peoplebot=debug,poise=info,serenity=info,tokio=warn";
+
+pub fn init_tracing() {
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .parse_lossy(env::var("RUST_LOG").unwrap_or_else(|_| DEFAULT_FILTER_DIRECTIVES.into()));
+
+    let builder = fmt::fmt().with_env_filter(env_filter).with_target(false);
+
+    #[cfg(debug_assertions)]
+    let builder = builder
+        .with_target(true)
+        .with_thread_names(true)
+        .with_thread_ids(true)
+        .with_file(true)
+        .with_line_number(true);
+
+    #[cfg(not(debug_assertions))]
+    let builder = builder.compact();
+
+    let init_result = builder.try_init();
+
+    if let Err(error) = init_result {
+        eprintln!("tracing subscriber already initialized: {error}");
+    }
 }

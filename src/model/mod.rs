@@ -1,16 +1,29 @@
 mod env;
 
+use std::sync::{Arc, atomic::AtomicBool};
+
 pub use env::{EnvError, EnvStore, EnvValidationError, get_env};
 
-use derive_new::new;
 use futures::future::BoxFuture;
+use songbird::Songbird;
 
 use crate::prelude::*;
 
 pub type Context<'a> = poise::Context<'a, GlobalState, Error>;
 
-#[derive(new)]
-pub struct GlobalState {}
+pub struct GlobalState {
+    pub dl_task_running: AtomicBool,
+    pub songbird: Arc<Songbird>,
+}
+
+impl Default for GlobalState {
+    fn default() -> Self {
+        Self {
+            dl_task_running: AtomicBool::new(false),
+            songbird: songbird::Songbird::serenity(),
+        }
+    }
+}
 
 pub struct BotCommand(pub fn() -> Vec<Command<GlobalState, Error>>);
 
