@@ -27,6 +27,7 @@ opendal = "0.54"
 tracing-subscriber = "0.3"
 inventory = "0.3"
 tracing = {version = "0.1", features = ["release_max_level_info"]}
+thiserror = "1.0"
 
 [profile.dev]
 opt-level = 1
