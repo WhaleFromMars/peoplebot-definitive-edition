@@ -75,6 +75,64 @@ macro_rules! register_startup_listener {
 /// ```
 #[macro_export]
 macro_rules! register_env {
+    ($store:ident, Option<$ty:ty>) => {
+        #[allow(non_upper_case_globals)]
+        pub static $store: $crate::model::EnvStore<Option<$ty>> =
+            $crate::model::EnvStore::new(stringify!($store));
+
+        const _: () = {
+            fn __peoplebot_env_wrapper()
+            -> ::futures::future::BoxFuture<'static, $crate::model::EnvRequirementResult> {
+                ::std::boxed::Box::pin(async move {
+                    if !$store.is_active() {
+                        return ::std::result::Result::Ok(());
+                    }
+
+                    let env_name = $store.name();
+                    let value = match $crate::prelude::env::var(env_name) {
+                        Ok(val) => {
+                            let trimmed = val.trim();
+                            if trimmed.is_empty() {
+                                None
+                            } else {
+                                match trimmed.parse::<$ty>() {
+                                    Ok(parsed) => Some(parsed),
+                                    Err(err) => {
+                                        return ::std::result::Result::Err(
+                                            $crate::model::EnvError::Invalid {
+                                                var: env_name,
+                                                reason: err.to_string(),
+                                            },
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        Err(::std::env::VarError::NotPresent) => None,
+                        Err(::std::env::VarError::NotUnicode(val)) => {
+                            return ::std::result::Result::Err($crate::model::EnvError::Invalid {
+                                var: env_name,
+                                reason: format!(
+                                    "value is not valid UTF-8: {}",
+                                    val.to_string_lossy()
+                                ),
+                            });
+                        }
+                    };
+
+                    $store.set(value);
+                    Ok(())
+                })
+            }
+
+            ::inventory::submit! {
+                $crate::model::EnvRequirement {
+                    validate: __peoplebot_env_wrapper,
+                }
+            }
+        };
+    };
+
     ($store:ident, $ty:ty) => {
         #[allow(non_upper_case_globals)]
         pub static $store: $crate::model::EnvStore<$ty> =
