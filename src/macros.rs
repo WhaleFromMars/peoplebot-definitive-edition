@@ -1,4 +1,18 @@
 /// Registers one or more commands with the bot.
+/// ```
+/// use peoplebot::prelude::*;
+///
+/// register_commands!(command);
+///
+/// #[command(slash_command, prefix_command)]
+/// async fn command(
+///     _ctx: Context<'_>,
+///     param: String,
+/// ) -> Result<()> {
+///     Ok(())
+/// }
+///
+/// ```
 #[macro_export]
 macro_rules! register_commands {
       ($($command:path),+ $(,)?) => {
@@ -17,6 +31,18 @@ macro_rules! register_commands {
   }
 
 /// Registers an async event handler to be called when an event occurs.
+/// ```
+/// use peoplebot::prelude::*;
+///
+/// async fn event_listener(
+///     ctx: FrameworkContext<'_, GlobalState, Error>,
+///     event: &FullEvent,
+/// ) -> Result<()> {
+///     Ok(())
+/// }
+///
+/// register_event_listener!(event_listener);
+/// ```
 #[macro_export]
 macro_rules! register_event_listener {
     ($handler:path) => {
@@ -42,6 +68,15 @@ macro_rules! register_event_listener {
 }
 
 /// Registers an async startup hook to be called when the process starts. Occurs before any discord specific logic occurs.
+/// ```
+/// use peoplebot::prelude::*;
+///
+/// async fn startup_listener() -> Result<()> {
+///     Ok(())
+/// }
+///
+/// register_startup_listener!(startup_listener);
+/// ```
 #[macro_export]
 macro_rules! register_startup_listener {
     ($handler:path) => {
