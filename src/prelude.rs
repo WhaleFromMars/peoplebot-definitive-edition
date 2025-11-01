@@ -4,4 +4,4 @@ pub use anyhow::{Error, Result};
 pub use poise::serenity_prelude::*;
 pub use poise::{Command, FrameworkContext, command};
 pub use std::env;
-pub use tracing::{debug, error, info, trace, warn};
+pub use tracing::{debug, error, info, instrument, trace, warn};

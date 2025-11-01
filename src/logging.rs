@@ -1,3 +1,3 @@
-pub fn init_logging() {
+pub fn init_tracing() {
     tracing_subscriber::fmt::init();
 }

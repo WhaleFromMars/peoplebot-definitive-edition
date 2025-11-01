@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use dotenvy::dotenv;
 use futures::future::{join_all, try_join_all};
-use logging::init_logging;
+use logging::init_tracing;
 use model::{EnvRequirement, EnvValidationError, StartupListener};
 use poise::{Framework, FrameworkOptions};
 
@@ -17,9 +17,10 @@ register_env!(DISCORD_TOKEN, String);
 register_env!(DEV_GUILD_ID, GuildId);
 
 #[tokio::main]
+#[instrument]
 async fn main() -> Result<()> {
     dotenv().ok();
-    init_logging();
+    init_tracing();
 
     verify_env_requirements().await?;
     let token = get_env(&DISCORD_TOKEN);
