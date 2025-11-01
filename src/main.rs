@@ -1,8 +1,8 @@
 use crate::prelude::*;
 use dotenvy::dotenv;
-use futures::future::try_join_all;
+use futures::future::{join_all, try_join_all};
 use logging::init_logging;
-use model::StartupListener;
+use model::{EnvRequirement, EnvValidationError, StartupListener};
 use poise::{Framework, FrameworkOptions};
 
 mod embedder;
@@ -13,17 +13,16 @@ mod macros;
 mod model;
 pub mod prelude;
 
-#[cfg(debug_assertions)]
-const TOKEN_ENV: &str = "DEV_DISCORD_TOKEN";
-#[cfg(not(debug_assertions))]
-const TOKEN_ENV: &str = "PROD_DISCORD_TOKEN";
+register_env!(DISCORD_TOKEN, String);
+register_env!(DEV_GUILD_ID, GuildId);
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv().ok();
     init_logging();
 
-    let token = env::var(TOKEN_ENV).expect("Environment variable {TOKEN_ENV} must be set");
+    verify_env_requirements().await?;
+    let token = get_env(&DISCORD_TOKEN);
 
     fire_startup_events().await?;
 
@@ -38,12 +37,6 @@ async fn main() -> Result<()> {
 }
 
 fn init_framework() -> Framework<GlobalState, Error> {
-    #[cfg(debug_assertions)]
-    let dev_guild_id: GuildId = env::var("DEV_GUILD_ID")
-        .expect("env variable DEV_GUILD_ID should be set")
-        .parse()
-        .expect("env variable DEV_GUILD_ID should be a u64");
-
     Framework::builder()
         .options(FrameworkOptions {
             commands: collect_commands(),
@@ -56,7 +49,7 @@ fn init_framework() -> Framework<GlobalState, Error> {
                 poise::builtins::register_in_guild(
                     ctx,
                     &framework.options().commands,
-                    dev_guild_id,
+                    get_env(&DEV_GUILD_ID),
                 )
                 .await?;
 
@@ -79,6 +72,25 @@ async fn fire_startup_events() -> Result<()> {
     Ok(())
 }
 
+async fn verify_env_requirements() -> Result<()> {
+    let futures = inventory::iter::<EnvRequirement>
+        .into_iter()
+        .map(|requirement| (requirement.validate)())
+        .collect::<Vec<_>>();
+
+    let results = join_all(futures).await;
+    let errors = results
+        .into_iter()
+        .filter_map(|result| result.err())
+        .collect::<Vec<_>>();
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(EnvValidationError::from_errors(errors).into())
+    }
+}
+
 async fn event_handler(
     ctx: FrameworkContext<'_, GlobalState, Error>,
     event: &FullEvent,
@@ -93,7 +105,7 @@ async fn event_handler(
 }
 
 fn collect_commands() -> Vec<Command<GlobalState, Error>> {
-    inventory::iter::<CommandRegistry>
+    inventory::iter::<BotCommand>
         .into_iter()
         .flat_map(|p| p.0())
         .collect()
