@@ -1,17 +1,17 @@
 use crate::prelude::*;
 use dotenvy::dotenv;
 use futures::future::{join_all, try_join_all};
-use logging::init_tracing;
 use model::{EnvRequirement, EnvValidationError, StartupListener};
 use poise::{Framework, FrameworkOptions};
+use tracing::init_tracing;
 
 mod embedder;
 #[cfg(debug_assertions)]
 mod examples;
-mod logging;
 mod macros;
 mod model;
 pub mod prelude;
+mod tracing;
 
 register_env!(DISCORD_TOKEN, String);
 register_env!(DEV_GUILD_ID, GuildId);
