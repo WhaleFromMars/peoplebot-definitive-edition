@@ -104,7 +104,7 @@ async fn event_handler(
         .map(|listener| listener.0(ctx, event))
         .collect::<Vec<_>>();
 
-    try_join_all(futures).await?;
+    join_all(futures).await;
     Ok(())
 }
 
