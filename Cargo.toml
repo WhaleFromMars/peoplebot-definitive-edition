@@ -4,15 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0"
-derive-new = "0.7"
-dotenvy = "0.15"
-poise = { git = "https://github.com/serenity-rs/poise", branch = "next" }
-regex = "1.12"
-futures = "0.3"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next" }
+
+# Async runtime
 tokio = { version = "1.47", features = [
     "fs",
     "io-util",
@@ -20,13 +13,39 @@ tokio = { version = "1.47", features = [
     "process",
     "rt-multi-thread",
 ] }
-url = "2.5"
-opendal = "0.54"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-inventory = "0.3"
-tracing = {version = "0.1", features = ["release_max_level_info"]}
-thiserror = "1.0"
+futures = "0.3"
+
+# Discord frameworks
+poise = { git = "https://github.com/serenity-rs/poise", branch = "next" }
+serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next" }
 songbird = "0.5.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Config / Environment
+dotenvy = "0.15"
+
+# Errors
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = { version = "0.1", features = ["release_max_level_info"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Text Parsing
+regex = "1.12"
+url = "2.5"
+
+# Storage Backend
+opendal = "0.54"
+
+# Helpful Derives
+derive-new = "0.7"
+inventory = "0.3"
+
 
 [profile.dev]
 opt-level = 1
