@@ -1,7 +1,7 @@
-use crate::prelude::*;
+use crate::{model::GlobalDataRegistry, prelude::*};
 use dotenvy::dotenv;
 use futures::future::{join_all, try_join_all};
-use model::{EnvRequirement, EnvValidationError, StartupListener};
+use model::{EnvRegistry, EnvValidationError, StartupListenerRegistry};
 use poise::{Framework, FrameworkOptions};
 use tracing_subscriber::{EnvFilter, filter::LevelFilter, fmt};
 
@@ -54,6 +54,8 @@ fn init_framework() -> Framework<GlobalState, Error> {
                 #[cfg(not(debug_assertions))]
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
+                init_global_data(ctx).await;
+
                 Ok(GlobalState {
                     ..Default::default()
                 })
@@ -63,20 +65,22 @@ fn init_framework() -> Framework<GlobalState, Error> {
 }
 
 async fn fire_startup_events() -> Result<()> {
-    let futures = inventory::iter::<StartupListener>
+    let futures = inventory::iter::<StartupListenerRegistry>
         .into_iter()
-        .map(|listener| (listener.handle)())
+        .map(|listener| listener.0())
         .collect::<Vec<_>>();
+    info!("Firing {} startup events", futures.len());
 
     try_join_all(futures).await?;
     Ok(())
 }
 
 async fn verify_env_requirements() -> Result<()> {
-    let futures = inventory::iter::<EnvRequirement>
+    let futures = inventory::iter::<EnvRegistry>
         .into_iter()
-        .map(|requirement| (requirement.validate)())
+        .map(|requirement| requirement.0())
         .collect::<Vec<_>>();
+    info!("Verifying {} environment variables", futures.len());
 
     let results = join_all(futures).await;
     let errors = results
@@ -95,9 +99,9 @@ async fn event_handler(
     ctx: FrameworkContext<'_, GlobalState, Error>,
     event: &FullEvent,
 ) -> Result<()> {
-    let futures = inventory::iter::<EventListener>
+    let futures = inventory::iter::<EventListenerRegistry>
         .into_iter()
-        .map(|listener| (listener.handle)(ctx, event))
+        .map(|listener| listener.0(ctx, event))
         .collect::<Vec<_>>();
 
     try_join_all(futures).await?;
@@ -105,10 +109,19 @@ async fn event_handler(
 }
 
 fn collect_commands() -> Vec<Command<GlobalState, Error>> {
-    inventory::iter::<BotCommand>
+    let commands: Vec<Command<GlobalState, Error>> = inventory::iter::<CommandRegistry>
         .into_iter()
         .flat_map(|p| p.0())
-        .collect()
+        .collect();
+    info!("Registering {} commands", commands.len());
+    commands
+}
+
+async fn init_global_data(ctx: &poise::serenity_prelude::Context) {
+    let mut type_map = ctx.data.write().await;
+    inventory::iter::<GlobalDataRegistry>
+        .into_iter()
+        .for_each(|data| data.0(&mut type_map));
 }
 
 #[cfg(not(debug_assertions))]
@@ -134,9 +147,7 @@ pub fn init_tracing() {
     #[cfg(not(debug_assertions))]
     let builder = builder.compact();
 
-    let init_result = builder.try_init();
-
-    if let Err(error) = init_result {
+    if let Err(error) = builder.try_init() {
         eprintln!("tracing subscriber already initialized: {error}");
     }
 }

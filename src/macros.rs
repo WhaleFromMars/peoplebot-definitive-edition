@@ -24,7 +24,7 @@ macro_rules! register_commands {
               }
 
               inventory::submit! {
-                  $crate::model::BotCommand(__peoplebot_command_list)
+                  $crate::model::CommandRegistry(__peoplebot_command_list)
               }
           };
       };
@@ -59,9 +59,8 @@ macro_rules! register_event_listener {
             }
 
             ::inventory::submit! {
-                $crate::model::EventListener {
-                    handle: __peoplebot_event_wrapper,
-                }
+                $crate::model::EventListenerRegistry(__peoplebot_event_wrapper)
+
             }
         };
     };
@@ -87,9 +86,7 @@ macro_rules! register_startup_listener {
             }
 
             ::inventory::submit! {
-                $crate::model::StartupListener {
-                    handle: __peoplebot_startup_wrapper,
-                }
+                $crate::model::StartupListenerRegistry(__peoplebot_startup_wrapper)
             }
         };
     };
@@ -174,8 +171,10 @@ macro_rules! register_env {
             $crate::model::EnvStore::new(stringify!($store));
 
         const _: () = {
-            fn __peoplebot_env_wrapper()
-            -> ::futures::future::BoxFuture<'static, $crate::model::EnvRequirementResult> {
+            fn __peoplebot_env_wrapper() -> ::futures::future::BoxFuture<
+                'static,
+                std::result::Result<(), $crate::model::env::EnvError>,
+            > {
                 ::std::boxed::Box::pin(async move {
                     if !$store.is_active() {
                         return ::std::result::Result::Ok(());
@@ -213,9 +212,7 @@ macro_rules! register_env {
             }
 
             ::inventory::submit! {
-                $crate::model::EnvRequirement {
-                    validate: __peoplebot_env_wrapper,
-                }
+                $crate::model::EnvRegistry(__peoplebot_env_wrapper)
             }
         };
     };

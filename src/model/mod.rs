@@ -1,58 +1,42 @@
-mod env;
-
-use std::sync::{Arc, atomic::AtomicBool};
+pub mod env;
 
 pub use env::{EnvError, EnvStore, EnvValidationError, get_env};
-
 use futures::future::BoxFuture;
 use songbird::Songbird;
+use std::sync::Arc;
 
 use crate::prelude::*;
 
 pub type Context<'a> = poise::Context<'a, GlobalState, Error>;
 
 pub struct GlobalState {
-    pub dl_task_running: AtomicBool,
     pub songbird: Arc<Songbird>,
 }
 
 impl Default for GlobalState {
     fn default() -> Self {
         Self {
-            dl_task_running: AtomicBool::new(false),
             songbird: songbird::Songbird::serenity(),
         }
     }
 }
 
-pub struct BotCommand(pub fn() -> Vec<Command<GlobalState, Error>>);
+pub struct GlobalDataRegistry(pub fn(&mut TypeMap));
+inventory::collect!(GlobalDataRegistry);
 
-inventory::collect!(BotCommand);
+pub struct CommandRegistry(pub fn() -> Vec<Command<GlobalState, Error>>);
+inventory::collect!(CommandRegistry);
 
-pub type StartupListenerFn = fn() -> BoxFuture<'static, Result<()>>;
+pub struct StartupListenerRegistry(pub fn() -> BoxFuture<'static, Result<()>>);
+inventory::collect!(StartupListenerRegistry);
 
-pub struct StartupListener {
-    pub handle: StartupListenerFn,
-}
+pub struct EnvRegistry(pub fn() -> BoxFuture<'static, std::result::Result<(), EnvError>>);
+inventory::collect!(EnvRegistry);
 
-inventory::collect!(StartupListener);
-
-pub type EnvRequirementResult = std::result::Result<(), EnvError>;
-pub type EnvRequirementFn = fn() -> BoxFuture<'static, EnvRequirementResult>;
-
-pub struct EnvRequirement {
-    pub validate: EnvRequirementFn,
-}
-
-inventory::collect!(EnvRequirement);
-
-pub type EventListenerFn = for<'a> fn(
-    FrameworkContext<'a, GlobalState, Error>,
-    &'a FullEvent,
-) -> BoxFuture<'a, Result<()>>;
-
-pub struct EventListener {
-    pub handle: EventListenerFn,
-}
-
-inventory::collect!(EventListener);
+pub struct EventListenerRegistry(
+    pub  for<'a> fn(
+        FrameworkContext<'a, GlobalState, Error>,
+        &'a FullEvent,
+    ) -> BoxFuture<'a, Result<()>>,
+);
+inventory::collect!(EventListenerRegistry);
