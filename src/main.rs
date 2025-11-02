@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic, clippy::cargo, clippy::nursery)]
+
 use crate::{model::GlobalDataRegistry, prelude::*};
 use dotenvy::dotenv;
 use futures::future::{join_all, try_join_all};
