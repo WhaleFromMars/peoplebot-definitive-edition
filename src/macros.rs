@@ -177,13 +177,13 @@ macro_rules! register_global_data {
 /// The variable name is prefixed automatically as `DEV_<YOUR_IDENTIFIER>` in debug builds and `PROD_<YOUR_IDENTIFIER>` otherwise.
 /// If you manually prefix the variable name with PROD_ or DEV_, it will ONLY exist in that environment.
 /// \
-/// Retrieving the value is done using get_env(&YOUR_IDENTIFIER), you do not need to prefix this,
+/// Retrieving the value is done using YOUR_IDENTIFIER.get(), you do not need to prefix this,
 /// the function will return the correct version for prod or dev environments.
 /// ```
 /// register_env!(YOUR_IDENTIFIER, String);
 ///
 /// fn () {
-///  let env_value = get_env(&YOUR_IDENTIFIER);
+///  let env_value = YOUR_IDENTIFIER.get();
 /// }
 /// ```
 #[macro_export]

@@ -98,7 +98,3 @@ impl<T> EnvStore<T> {
         self.resolved_name()
     }
 }
-
-pub fn get_env<T: Clone>(store: &'static EnvStore<T>) -> T {
-    store.get().clone()
-}

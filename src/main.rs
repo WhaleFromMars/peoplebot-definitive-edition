@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
 
     let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES;
     let framework = init_framework();
-    let token = get_env(&DISCORD_TOKEN);
+    let token = DISCORD_TOKEN.get();
 
     let mut client = ClientBuilder::new(token, intents)
         .framework(framework)
