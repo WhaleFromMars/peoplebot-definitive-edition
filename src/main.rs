@@ -20,12 +20,11 @@ async fn main() -> Result<()> {
     init_tracing();
 
     verify_env_requirements().await?;
-    let token = get_env(&DISCORD_TOKEN);
-
     fire_startup_events().await?;
 
     let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES;
     let framework = init_framework();
+    let token = get_env(&DISCORD_TOKEN);
 
     let mut client = ClientBuilder::new(token, intents)
         .framework(framework)
@@ -71,6 +70,8 @@ async fn fire_startup_events() -> Result<()> {
         .collect::<Vec<_>>();
     info!("Firing {} startup events", futures.len());
 
+    //if a startup event returns an error it should short circuit, hence using try variant of join_all
+    //startups are meant for logic that your module HAS to have run before the bot can start
     try_join_all(futures).await?;
     Ok(())
 }
@@ -119,9 +120,14 @@ fn collect_commands() -> Vec<Command<GlobalState, Error>> {
 
 async fn init_global_data(ctx: &poise::serenity_prelude::Context) {
     let mut type_map = ctx.data.write().await;
+    let mut count = 0;
     inventory::iter::<GlobalDataRegistry>
         .into_iter()
-        .for_each(|data| data.0(&mut type_map));
+        .for_each(|data| {
+            data.0(&mut type_map);
+            count += 1;
+        });
+    info!("Registered {} global data types", count);
 }
 
 #[cfg(not(debug_assertions))]
