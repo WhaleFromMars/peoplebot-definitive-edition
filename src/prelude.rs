@@ -1,6 +1,4 @@
-pub use crate::model::{
-    CommandRegistry, Context, EnvStore, EventListenerRegistry, GlobalState, get_env,
-};
+pub use crate::model::{CommandRegistry, Context, EnvStore, EventListenerRegistry, GlobalState};
 pub use crate::{
     register_commands, register_env, register_event_listener, register_global_data,
     register_startup_listener,

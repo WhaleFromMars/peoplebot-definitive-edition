@@ -48,7 +48,7 @@ fn init_framework() -> Framework<GlobalState, Error> {
                 poise::builtins::register_in_guild(
                     ctx,
                     &framework.options().commands,
-                    get_env(&DEV_GUILD_ID),
+                    DEV_GUILD_ID.get().clone(),
                 )
                 .await?;
 

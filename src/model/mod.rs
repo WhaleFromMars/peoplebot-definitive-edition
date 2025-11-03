@@ -1,6 +1,6 @@
 pub mod env;
 
-pub use env::{EnvError, EnvStore, EnvValidationError, get_env};
+pub use env::{EnvError, EnvStore, EnvValidationError};
 use futures::future::BoxFuture;
 use songbird::Songbird;
 use std::sync::Arc;
