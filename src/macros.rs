@@ -173,21 +173,38 @@ macro_rules! register_global_data {
     };
 }
 
-/// Registers an environment variable name and type it must coerce to, this check triggers at startup.
-/// The variable name is prefixed automatically as `DEV_<YOUR_IDENTIFIER>` in debug builds and `PROD_<YOUR_IDENTIFIER>` otherwise.
-/// If you manually prefix the variable name with PROD_ or DEV_, it will ONLY exist in that environment.
-/// \
-/// Retrieving the value is done using YOUR_IDENTIFIER.get(), you do not need to prefix this,
-/// the function will return the correct version for prod or dev environments.
+/// Registers an environment variable and the type it must coerce to; this check runs at startup.
+///
+/// # Prefix resolution
+/// - **Unprefixed identifiers** (e.g. `CONCURRENCY_LIMIT`) resolve by build:
+///   - **Debug**: use `DEV_<IDENTIFIER>` if set; otherwise fall back to `BOTH_<IDENTIFIER>`.
+///   - **Release**: use `PROD_<IDENTIFIER>` if set; otherwise fall back to `BOTH_<IDENTIFIER>`.
+/// - **Manually prefixed identifiers**:
+///   - `DEV_…` → validated **only in debug** builds.
+///   - `PROD_…` → validated **only in release** builds.
+///   - `BOTH_…` → validated in **both** builds (no DEV/PROD preference).
+///
+/// # Usage
+/// Retrieving the value is done with `YOUR_IDENTIFIER.get()`. You never need to include a prefix;
+/// the correct env var is chosen automatically according to the rules above.
+///
 /// ```
 /// register_env!(YOUR_IDENTIFIER, String);
 ///
-/// fn () {
-///  let env_value = YOUR_IDENTIFIER.get();
+/// fn example() {
+///     let env_value = YOUR_IDENTIFIER.get();
 /// }
 /// ```
+///
+/// For optional values, use:
+/// ```
+/// register_env!(YOUR_OTHER_IDENTIFIER, Option<u32>);
+/// ```
+/// Missing/empty values become `None`; parse/UTF-8 errors still fail validation.
+
 #[macro_export]
 macro_rules! register_env {
+    // Optional form: Option<T>
     ($store:ident, Option<$ty:ty>) => {
         #[allow(non_upper_case_globals)]
         pub static $store: $crate::model::EnvStore<Option<$ty>> =
@@ -197,55 +214,17 @@ macro_rules! register_env {
             fn __peoplebot_env_wrapper()
             -> ::futures::future::BoxFuture<'static, $crate::model::EnvRequirementResult> {
                 ::std::boxed::Box::pin(async move {
-                    if !$store.is_active() {
-                        return ::std::result::Result::Ok(());
-                    }
-
-                    let env_name = $store.name();
-                    let value = match $crate::prelude::env::var(env_name) {
-                        Ok(val) => {
-                            let trimmed = val.trim();
-                            if trimmed.is_empty() {
-                                None
-                            } else {
-                                match trimmed.parse::<$ty>() {
-                                    Ok(parsed) => Some(parsed),
-                                    Err(err) => {
-                                        return ::std::result::Result::Err(
-                                            $crate::model::EnvError::Invalid {
-                                                var: env_name,
-                                                reason: err.to_string(),
-                                            },
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                        Err(::std::env::VarError::NotPresent) => None,
-                        Err(::std::env::VarError::NotUnicode(val)) => {
-                            return ::std::result::Result::Err($crate::model::EnvError::Invalid {
-                                var: env_name,
-                                reason: format!(
-                                    "value is not valid UTF-8: {}",
-                                    val.to_string_lossy()
-                                ),
-                            });
-                        }
-                    };
-
-                    $store.set(value);
-                    Ok(())
+                    $crate::model::validate::validate_env::<$crate::model::EnvStore<Option<$ty>>, $ty>(&$store).await
                 })
             }
 
             ::inventory::submit! {
-                $crate::model::EnvRequirement {
-                    validate: __peoplebot_env_wrapper,
-                }
+                $crate::model::EnvRequirement { validate: __peoplebot_env_wrapper }
             }
         };
     };
 
+    // Required form: T
     ($store:ident, $ty:ty) => {
         #[allow(non_upper_case_globals)]
         pub static $store: $crate::model::EnvStore<$ty> =
@@ -254,41 +233,10 @@ macro_rules! register_env {
         const _: () = {
             fn __peoplebot_env_wrapper() -> ::futures::future::BoxFuture<
                 'static,
-                std::result::Result<(), $crate::model::env::EnvError>,
+                std::result::Result<(), $crate::model::EnvError>,
             > {
                 ::std::boxed::Box::pin(async move {
-                    if !$store.is_active() {
-                        return ::std::result::Result::Ok(());
-                    }
-                    let env_name = $store.name();
-                    let value = match $crate::prelude::env::var(env_name) {
-                        Ok(val) => val,
-                        Err(::std::env::VarError::NotPresent) => {
-                            return ::std::result::Result::Err($crate::model::EnvError::Missing {
-                                var: env_name,
-                            });
-                        }
-                        Err(::std::env::VarError::NotUnicode(val)) => {
-                            return ::std::result::Result::Err($crate::model::EnvError::Invalid {
-                                var: env_name,
-                                reason: format!(
-                                    "value is not valid UTF-8: {}",
-                                    val.to_string_lossy()
-                                ),
-                            });
-                        }
-                    };
-
-                    let parsed =
-                        value
-                            .parse::<$ty>()
-                            .map_err(|err| $crate::model::EnvError::Invalid {
-                                var: env_name,
-                                reason: err.to_string(),
-                            })?;
-
-                    $store.set(parsed);
-                    Ok(())
+                    $crate::model::env::validate_env::<$crate::model::EnvStore<$ty>, $ty>(&$store).await
                 })
             }
 
