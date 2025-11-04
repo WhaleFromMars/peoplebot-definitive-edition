@@ -7,6 +7,8 @@ pub enum EnvError {
     Missing { var: &'static str },
     #[error("Environment variable {var} is invalid: {reason}")]
     Invalid { var: &'static str, reason: String },
+    #[error("Environment variable {var} is already set")]
+    AlreadySet { var: &'static str },
 }
 
 #[derive(Debug, Error)]
@@ -26,10 +28,6 @@ impl EnvValidationError {
     }
 }
 
-#[derive(Debug, Error)]
-#[error("already initialized")]
-pub struct EnvSetError;
-
 pub struct EnvStore<T> {
     base_key: &'static str,
     value: OnceLock<T>,
@@ -47,8 +45,10 @@ impl<T> EnvStore<T> {
         self.base_key
     }
 
-    pub fn set(&self, value: T) -> Result<(), EnvSetError> {
-        self.value.set(value).map_err(|_| EnvSetError)
+    pub fn set(&self, value: T) -> Result<(), EnvError> {
+        self.value
+            .set(value)
+            .map_err(|_| EnvError::AlreadySet { var: self.base_key })
     }
 
     /// Get the initialized value (panics if not set).
@@ -144,10 +144,10 @@ pub trait EnvTarget<U> {
     fn base_key(&self) -> &'static str;
 
     /// Set a present, parsed value.
-    fn set_some(&'static self, v: U) -> Result<(), EnvSetError>;
+    fn set_some(&'static self, v: U) -> Result<(), EnvError>;
 
     /// Set the absence of a value; only meaningful when OPTIONAL==true.
-    fn set_none(&'static self) -> Result<(), EnvSetError>;
+    fn set_none(&'static self) -> Result<(), EnvError>;
 }
 
 // Non Optional EnvStore
@@ -159,12 +159,15 @@ impl<U> EnvTarget<U> for EnvStore<U> {
         self.base_key()
     }
     #[inline]
-    fn set_some(&'static self, v: U) -> Result<(), EnvSetError> {
+    fn set_some(&'static self, v: U) -> Result<(), EnvError> {
         self.set(v)
     }
     #[inline]
-    fn set_none(&'static self) -> Result<(), EnvSetError> {
-        Err(EnvSetError)
+    fn set_none(&'static self) -> Result<(), EnvError> {
+        Err(EnvError::Invalid {
+            var: self.base_key(),
+            reason: "cannot set None for non-optional environment variable".into(),
+        })
     }
 }
 
@@ -177,11 +180,11 @@ impl<U> EnvTarget<U> for EnvStore<Option<U>> {
         self.base_key()
     }
     #[inline]
-    fn set_some(&'static self, v: U) -> Result<(), EnvSetError> {
+    fn set_some(&'static self, v: U) -> Result<(), EnvError> {
         self.set(Some(v))
     }
     #[inline]
-    fn set_none(&'static self) -> Result<(), EnvSetError> {
+    fn set_none(&'static self) -> Result<(), EnvError> {
         self.set(None)
     }
 }

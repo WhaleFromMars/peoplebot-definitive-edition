@@ -1,8 +1,13 @@
-use std::sync::atomic::AtomicBool;
+use std::{path::PathBuf, sync::atomic::AtomicBool};
 
 use crate::prelude::*;
 use poise::serenity_prelude::prelude::{TypeMap, TypeMapKey};
+use tokio::sync::watch::{Receiver, Sender};
 use url::Url;
+
+//these are envs as they should be set by whoever hosts the bot, not guild owners.
+register_env!(EMBEDDER_CONCURRENCY_LIMIT, u8);
+register_env!(EMBEDDER_SIZE_LIMIT, u64);
 
 pub struct EmbedderData {
     pub dl_is_running: AtomicBool,
@@ -27,11 +32,12 @@ fn init(map: &mut TypeMap) {
 pub struct DownloadRequest {
     pub url: Url,
     pub strip_audio: bool,
-    pub response: DownloadResponse,
+    pub tx: Sender<DownloadRequestStatus>,
 }
 
-#[derive(Default)]
-pub struct DownloadResponse {
-    pub sender: Option<UserId>,
-    pub prev_response: Option<MessageId>,
+pub enum DownloadRequestStatus {
+    Idle,
+    QueuePositionChanged(usize),
+    Progress(usize),
+    Finished(Result<PathBuf>),
 }
