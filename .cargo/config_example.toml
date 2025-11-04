@@ -87,6 +87,14 @@ rustdocflags = [
   # "-Clink-arg=-fuse-ld=mold",
 ]
 
+# Optional alternate linker for linux, dev only - doesnt have LTO yet for release builds,
+# but boasts smaller link times, not feature complete so might not work for your codebase
+# Worth following as they plan to implement incremental linking, no other linker has this yet
+# https://github.com/davidlattimore/wild
+# [target.x86_64-unknown-linux-gnu]
+# linker = "clang"
+# rustflags = ["-C", "link-arg=--ld-path=wild"]
+
 [target.x86_64-apple-darwin]
 rustflags = [
   # LLD linker
