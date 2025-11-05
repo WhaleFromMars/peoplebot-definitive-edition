@@ -48,6 +48,7 @@ opendal = "0.54"
 derive-new = "0.7"
 inventory = "0.3"
 uuid = "1.18.1"
+tokio-stream = "0.1.17"
 
 
 [profile.dev]
