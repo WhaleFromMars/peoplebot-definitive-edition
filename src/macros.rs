@@ -237,15 +237,20 @@ macro_rules! register_env {
             $crate::model::EnvStore::new(stringify!($store));
 
         const _: () = {
-            fn __peoplebot_env_wrapper()
-            -> ::futures::future::BoxFuture<'static, $crate::model::EnvRequirementResult> {
+            fn __peoplebot_env_wrapper() -> ::futures::future::BoxFuture<
+                'static,
+                std::result::Result<(), $crate::model::EnvError>,
+            > {
                 ::std::boxed::Box::pin(async move {
-                    $crate::model::validate::validate_env::<$crate::model::EnvStore<Option<$ty>>, $ty>(&$store).await
+                    $crate::model::env::validate_env::<$crate::model::EnvStore<Option<$ty>>, $ty>(
+                        &$store,
+                    )
+                    .await
                 })
             }
 
             ::inventory::submit! {
-                $crate::model::EnvRequirement { validate: __peoplebot_env_wrapper }
+                $crate::model::EnvRegistry(__peoplebot_env_wrapper)
             }
         };
     };
@@ -262,7 +267,8 @@ macro_rules! register_env {
                 std::result::Result<(), $crate::model::EnvError>,
             > {
                 ::std::boxed::Box::pin(async move {
-                    $crate::model::env::validate_env::<$crate::model::EnvStore<$ty>, $ty>(&$store).await
+                    $crate::model::env::validate_env::<$crate::model::EnvStore<$ty>, $ty>(&$store)
+                        .await
                 })
             }
 
