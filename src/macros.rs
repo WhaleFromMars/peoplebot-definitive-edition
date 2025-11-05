@@ -38,10 +38,24 @@ macro_rules! register_commands {
 ///     ctx: FrameworkContext<'_, GlobalState, Error>,
 ///     event: &FullEvent,
 /// ) -> Result<()> {
+///     match event {
+///         FullEvent::MessageCreate(message) => {
+///             if message.content == "!ping" {
+///                 message.reply(ctx, "Pong!").await?;
+///             }
+///         }
+///         _ => {}
+///     }
 ///     Ok(())
 /// }
 ///
 /// register_event_listener!(event_listener);
+/// ```
+/// This macro is just short hand for the following:
+/// ```
+/// inventory::submit! {
+///    peoplebot::model::EventListenerRegistry(event_listener)
+///}
 /// ```
 #[macro_export]
 macro_rules! register_event_listener {
@@ -75,6 +89,12 @@ macro_rules! register_event_listener {
 /// }
 ///
 /// register_startup_listener!(startup_listener);
+/// ```
+/// This macro is just short hand for the following:
+/// ```
+/// inventory::submit! {
+///    peoplebot::model::StartupListenerRegistry(startup_listener)
+///}
 /// ```
 #[macro_export]
 macro_rules! register_startup_listener {
@@ -155,6 +175,12 @@ macro_rules! register_startup_listener {
 ///     };
 ///     total.fetch_add(1, Ordering::SeqCst);
 /// }
+/// ```
+/// This macro is just short hand for the following:
+/// ```
+/// inventory::submit! {
+///    peoplebot::model::GlobalDataRegistry(your_init_function)
+///}
 /// ```
 #[macro_export]
 macro_rules! register_global_data {
