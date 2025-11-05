@@ -47,6 +47,7 @@ opendal = "0.54"
 # Helpful Derives
 derive-new = "0.7"
 inventory = "0.3"
+uuid = "1.18.1"
 
 
 [profile.dev]
