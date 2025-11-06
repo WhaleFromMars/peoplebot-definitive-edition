@@ -1,7 +1,7 @@
-use crate::{
-    modules::embedder::model::{EmbedderData, EmbedderDataKey},
-    prelude::*,
-};
+use crate::modules::embedder::model::{DownloadRequest, YtDlpEvent};
+use crate::{modules::embedder::model::EmbedderDataKey, prelude::*};
+use std::{path::PathBuf, process::Stdio};
+use tokio::io::{AsyncBufReadExt, BufReader};
 
 mod commands;
 mod model;
@@ -48,18 +48,76 @@ async fn event_listener(
             .clone()
     };
     match event {
-        FullEvent::CacheReady { .. } => {
-            let embedder_data = embedder_data;
-            tokio::spawn(async move {
-                loop {
-                    tokio::time::sleep(Duration::from_millis(200)).await;
-                    process_download_queue(&*embedder_data).await;
-                }
-            });
-        }
+        FullEvent::CacheReady { .. } => {}
         _ => {}
     }
     Ok(())
 }
 
-async fn process_download_queue(data: &Mutex<EmbedderData>) {}
+pub const BASE_ARGS: &[&str] = &[
+    "--no-sponsorblock", // cleaner output
+    "--newline",         // one event per line
+    "--no-warnings",     // less noise
+    "--progress",        // ensure progress ticks
+    "--progress-delta",
+    "1", //only report progress changes every 1 second
+    //start & progress events for downloading and post-processing
+    "--print",
+    r#"before_dl:{"event":"dl_started","id":"%(id)s"}"#,
+    "--progress-template",
+    r#"download:{"event":"dl_progress","id":"%(info.id)s","percent":"%(progress._percent_str)s","eta":"%(progress._eta_str)s"}"#,
+    "--print",
+    r#"post_process:{"event":"pp_started","id":"%(id)s"}"#,
+    "--progress-template",
+    r#"postprocess:{"event":"pp_progress","id":"%(info.id)s","percent":"%(progress._percent_str)s","eta":"%(progress._eta_str)s"}"#,
+    //Completion event
+    "--print",
+    r#"after_move:{"event":"moved","id":"%(id)s","path":%(filepath)j}"#,
+    //Paths & formats
+    "-P",
+    "home:./out",
+    "-P",
+    "temp:./tmp",
+    "-f",
+    "bv*+ba/b",
+];
+
+async fn download(request: DownloadRequest) -> Result<()> {
+    debug!("Downloading {}", request.url);
+    let DownloadRequest {
+        url,
+        strip_audio,
+        sender,
+    } = request;
+
+    let mut cmd = ProcessCommand::new("yt-dlp");
+    cmd.arg(url.to_string())
+        .args(BASE_ARGS)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let mut child = cmd.spawn()?;
+
+    let stdout = child.stdout.take().expect("piped stdout");
+    // let stderr = child.stderr.take().expect("piped stderr");
+    let mut out_lines = BufReader::new(stdout).lines();
+    // let mut err_lines = BufReader::new(stderr).lines();
+
+    while let Some(line) = out_lines.next_line().await? {
+        debug!("yt-dlp output: {}", line);
+        if let Ok(event) = serde_json::from_str::<YtDlpEvent>(&line) {
+            debug!("yt-dlp event: {:?}", event);
+            match event {
+                YtDlpEvent::Finished { id, path } => {
+                    let _ = sender.send(YtDlpEvent::Finished { id, path });
+                    break;
+                }
+                other => {
+                    let _ = sender.send(other);
+                }
+            }
+        }
+    }
+
+    Ok(())
+}

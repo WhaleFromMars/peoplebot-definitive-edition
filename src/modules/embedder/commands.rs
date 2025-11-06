@@ -1,7 +1,8 @@
 use crate::{
-    modules::embedder::model::{DownloadRequest, DownloadRequestStatus, EmbedderDataKey},
+    modules::embedder::model::{DownloadRequest, EmbedderDataKey, YtDlpEvent},
     prelude::*,
 };
+use poise::{CreateReply, ReplyHandle};
 use tokio::sync::watch;
 use url::Url;
 
@@ -26,35 +27,98 @@ pub async fn embed(
             .expect("Embedder data not found")
             .clone()
     };
-    let (tx, mut rx) = watch::channel(DownloadRequestStatus::Idle);
+
+    let (sender, mut receiver) = watch::channel(YtDlpEvent::Unknown);
     let download_request = DownloadRequest {
         url,
         strip_audio,
-        tx,
+        sender,
     };
-
+    let mut handle: Option<ReplyHandle> = None;
     {
-        embedder_data
-            .lock()
-            .await
-            .dl_queue
-            .push_back(download_request);
+        let data = embedder_data.lock().await;
+        match data.download_queue.try_enqueue(download_request) {
+            Ok(_) => {
+                handle = ctx.reply(format!("Awaiting Download...")).await.ok();
+            }
+            Err(_) => {
+                handle = ctx
+                    .reply(format!(
+                        "Failed to queue download, server might be overloaded"
+                    ))
+                    .await
+                    .ok();
+            }
+        }
     }
 
-    loop {
-        match &*rx.borrow() {
-            DownloadRequestStatus::Finished(res) => {
-                println!("finished: {res:?}");
-                break;
+    while receiver.changed().await.is_ok() {
+        let event = receiver.borrow_and_update().clone(); //clone until I can be bothered to see if we can use references
+        match event {
+            YtDlpEvent::DLStarted { id } => {
+                handle = edit_or_send_new(&ctx, handle, format!("Downloading..."))
+                    .await
+                    .ok();
             }
-            _ => {}
-        }
-
-        if rx.changed().await.is_err() {
-            //let user know that the download failed
-            break;
+            YtDlpEvent::DLProgress { id, percent, eta } => {
+                handle = edit_or_send_new(
+                    &ctx,
+                    handle,
+                    format!("Downloading... {}%, {}", percent, eta),
+                )
+                .await
+                .ok();
+            }
+            YtDlpEvent::PPStarted { id } => {
+                handle = edit_or_send_new(&ctx, handle, format!("Processing..."))
+                    .await
+                    .ok();
+            }
+            YtDlpEvent::PPProgress { id, percent, eta } => {
+                handle =
+                    edit_or_send_new(&ctx, handle, format!("Processing... {}%, {}", percent, eta))
+                        .await
+                        .ok();
+            }
+            YtDlpEvent::Finished { id, path } => {
+                let attachment = CreateAttachment::path(path).await?; //can fail to open the file
+                let message = CreateMessage::new().content("").add_file(attachment);
+                ctx.channel_id()
+                    .send_message(&ctx.http(), message)
+                    .await
+                    .ok();
+            }
+            _ => { /*discard other events*/ }
         }
     }
 
     Ok(())
+}
+
+/// Edit an existing message or send a new one if the handle has expired
+/// Will only return an error if a new message cannot be sent
+async fn edit_or_send_new<'a>(
+    ctx: &Context<'a>,
+    handle: Option<ReplyHandle<'a>>,
+    content: impl Into<String>,
+) -> Result<ReplyHandle<'a>> {
+    let content = content.into();
+
+    if let Some(handle) = handle {
+        match handle
+            .edit(*ctx, CreateReply::new().content(&content))
+            .await
+        {
+            Ok(_) => Ok(handle),
+            Err(_) => {
+                // The handle has expired; send a new message.
+                let handle = ctx.say(&content).await?;
+                Ok(handle)
+            }
+        }
+    } else {
+        // No existing handle; just send a new message.
+        let handle = ctx.say(&content).await?;
+        Ok(handle)
+    }
 }
