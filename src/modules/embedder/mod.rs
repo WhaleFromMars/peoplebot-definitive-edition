@@ -1,5 +1,5 @@
 use crate::modules::embedder::model::{DownloadRequest, YtDlpEvent};
-use crate::{modules::embedder::model::EmbedderDataKey, prelude::*};
+use crate::prelude::*;
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -7,7 +7,6 @@ mod commands;
 mod model;
 
 register_startup_listener!(check_deps);
-register_event_listener!(event_listener);
 
 async fn check_deps() -> Result<()> {
     let yt = async {
@@ -35,23 +34,6 @@ async fn check_deps() -> Result<()> {
         }
         bail!("missing deps: {}", missing.join(", "));
     }
-}
-
-async fn event_listener(
-    ctx: FrameworkContext<'_, GlobalState, Error>,
-    event: &FullEvent,
-) -> Result<()> {
-    let embedder_data = {
-        let data = ctx.serenity_context.data.read().await;
-        data.get::<EmbedderDataKey>()
-            .expect("Embedder data not found")
-            .clone()
-    };
-    match event {
-        FullEvent::CacheReady { .. } => {}
-        _ => {}
-    }
-    Ok(())
 }
 
 pub const BASE_ARGS: &[&str] = &[
