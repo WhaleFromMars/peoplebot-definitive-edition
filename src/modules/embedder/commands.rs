@@ -3,7 +3,7 @@ use crate::{
     prelude::*,
 };
 use poise::{CreateReply, ReplyHandle};
-use tokio::sync::watch;
+use tokio::{fs::remove_file, sync::watch};
 use url::Url;
 
 register_commands!(embed);
@@ -21,6 +21,11 @@ pub async fn embed(
     let strip_audio = strip_audio.unwrap_or(false);
     let url = Url::parse(&link)?;
     let original_url = url.clone(); //a copy we can use later
+    let name = if anonymous {
+        "anon".to_string()
+    } else {
+        ctx.author().mention().to_string()
+    };
 
     let embedder_data = {
         let data = ctx.serenity_context().data.read().await;
@@ -57,42 +62,43 @@ pub async fn embed(
     }
 
     while receiver.changed().await.is_ok() {
-        let event = receiver.borrow_and_update().clone(); //clone until I can be bothered to see if we can use references
+        let event = receiver.borrow_and_update().clone(); //can be done without a clone but its so messy, minor perf is negligible
         match event {
-            YtDlpEvent::DLStarted { id } => {
+            YtDlpEvent::DLStarted { .. } => {
+                // the .. ignores any remaining fields that we dont care for
                 handle = edit_or_send_new(&ctx, handle, format!("Downloading..."))
                     .await
                     .ok();
             }
-            YtDlpEvent::DLProgress { id, percent, eta } => {
-                handle = edit_or_send_new(
-                    &ctx,
-                    handle,
-                    format!("Downloading... {}%, {}", percent, eta),
-                )
-                .await
-                .ok();
+            YtDlpEvent::DLProgress { percent, .. } => {
+                handle = edit_or_send_new(&ctx, handle, format!("Downloading... {}", percent))
+                    .await
+                    .ok();
             }
-            YtDlpEvent::PPStarted { id } => {
+            YtDlpEvent::PPStarted { .. } => {
                 handle = edit_or_send_new(&ctx, handle, format!("Processing..."))
                     .await
                     .ok();
             }
-            YtDlpEvent::PPProgress { id, percent, eta } => {
-                handle =
-                    edit_or_send_new(&ctx, handle, format!("Processing... {}%, {}", percent, eta))
-                        .await
-                        .ok();
+            YtDlpEvent::PPProgress { percent, .. } => {
+                handle = edit_or_send_new(&ctx, handle, format!("Processing... {}", percent))
+                    .await
+                    .ok();
             }
-            YtDlpEvent::Finished { id, path } => {
-                let attachment = CreateAttachment::path(path).await?; //can fail to open the file, but not likely
+            YtDlpEvent::Finished { path, .. } => {
+                let attachment = CreateAttachment::path(&path).await?; //can fail to open the file, but not likely
                 let message = CreateMessage::new()
-                    .content(format!("[original link](<{}>)", original_url))
+                    .content(format!("-# sent by: {name} - [[link]](<{original_url}>)"))
                     .add_file(attachment);
                 ctx.channel_id()
                     .send_message(&ctx.http(), message)
                     .await
-                    .ok();
+                    .ok(); //consume potential error
+                //theres nothing we can do if it fails to send, and we want to make sure to delete the file afterwards
+
+                if let Err(_) = remove_file(&path).await {
+                    error!("Failed to remove file: {path}");
+                }
                 break;
             }
             _ => { /*discard other events*/ }
