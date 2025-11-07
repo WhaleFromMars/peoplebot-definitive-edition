@@ -1,12 +1,18 @@
-use crate::modules::embedder::model::{DownloadRequest, YtDlpEvent};
+use crate::modules::embedder::model::*;
 use crate::prelude::*;
-use std::process::Stdio;
+use anyhow::Context;
+use std::{
+    path::{Path, PathBuf},
+    process::Stdio,
+};
+use tokio::fs::{self, OpenOptions};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 mod commands;
 mod model;
 
 register_startup_listener!(check_deps);
+register_startup_listener!(validate_storage_paths);
 
 async fn check_deps() -> Result<()> {
     let yt = async {
@@ -55,14 +61,24 @@ pub const BASE_ARGS: &[&str] = &[
     //Completion event
     "--print",
     r#"after_move:{"event":"moved","id":"%(id)s","path":%(filepath)j}"#,
-    //Paths & formats
-    "-P",
-    "home:./out",
-    "-P",
-    "temp:./tmp",
-    "-f",
-    "bv*+ba/b",
 ];
+
+const FORMAT_ARGS: &[&str] = &["-f", "bv*+ba/b"];
+
+pub fn yt_dlp_storage_args() -> (String, String) {
+    let home = EMBEDDER_HOME_DIR
+        .get()
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_HOME_DIR));
+    let temp = EMBEDDER_TEMP_DIR
+        .get()
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_TEMP_DIR));
+
+    let home_arg = format!("home:{}", home.to_string_lossy());
+    let temp_arg = format!("temp:{}", temp.to_string_lossy());
+    (home_arg, temp_arg)
+}
 
 async fn download(request: DownloadRequest) -> Result<()> {
     debug!("Downloading {}", request.url);
@@ -73,8 +89,14 @@ async fn download(request: DownloadRequest) -> Result<()> {
     } = request;
 
     let mut cmd = ProcessCommand::new("yt-dlp");
+    let (home_arg, temp_arg) = yt_dlp_storage_args();
     cmd.arg(url.to_string())
         .args(BASE_ARGS)
+        .arg("-P")
+        .arg(home_arg)
+        .arg("-P")
+        .arg(temp_arg)
+        .args(FORMAT_ARGS)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -102,5 +124,37 @@ async fn download(request: DownloadRequest) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+async fn validate_storage_paths() -> Result<()> {
+    let home_dir = EMBEDDER_HOME_DIR
+        .get()
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_HOME_DIR));
+    let temp_dir = EMBEDDER_TEMP_DIR
+        .get()
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_TEMP_DIR));
+    ensure_dir_writable("home", &home_dir).await?;
+    ensure_dir_writable("temp", &temp_dir).await?;
+    Ok(())
+}
+
+async fn ensure_dir_writable(label: &str, path: &Path) -> Result<()> {
+    fs::create_dir_all(path)
+        .await
+        .with_context(|| format!("failed to create {label} directory at {}", path.display()))?;
+
+    let test_path = path.join(".peoplebot-write-test");
+    OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&test_path)
+        .await
+        .with_context(|| format!("cannot write to {label} directory at {}", path.display()))?;
+
+    let _ = fs::remove_file(&test_path).await;
     Ok(())
 }

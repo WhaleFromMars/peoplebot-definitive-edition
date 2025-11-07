@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::modules::embedder::download;
 use crate::prelude::*;
 use futures::StreamExt;
@@ -12,6 +14,11 @@ use url::Url;
 register_env!(EMBEDDER_CONCURRENCY_LIMIT, usize);
 register_env!(EMBEDDER_SIZE_LIMIT, u64);
 register_env!(EMBEDDER_MAX_QUEUE, Option<usize>);
+register_env!(EMBEDDER_HOME_DIR, Option<PathBuf>);
+register_env!(EMBEDDER_TEMP_DIR, Option<PathBuf>);
+
+pub const DEFAULT_HOME_DIR: &str = "./out";
+pub const DEFAULT_TEMP_DIR: &str = "./tmp";
 
 pub struct DownloadQueue {
     sender: MPSCSender<DownloadRequest>,
