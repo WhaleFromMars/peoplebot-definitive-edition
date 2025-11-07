@@ -20,6 +20,7 @@ pub async fn embed(
     let anonymous = anonymous.unwrap_or(false);
     let strip_audio = strip_audio.unwrap_or(false);
     let url = Url::parse(&link)?;
+    let original_url = url.clone(); //a copy we can use later
 
     let embedder_data = {
         let data = ctx.serenity_context().data.read().await;
@@ -29,15 +30,18 @@ pub async fn embed(
     };
 
     let (sender, mut receiver) = watch::channel(YtDlpEvent::Unknown);
-    let download_request = DownloadRequest {
+    let request = DownloadRequest {
         url,
         strip_audio,
         sender,
     };
+
+    #[allow(unused_assignments)] //it doesnt see it gets used in edit_or_send_new
     let mut handle: Option<ReplyHandle> = None;
+
     {
         let data = embedder_data.lock().await;
-        match data.download_queue.try_enqueue(download_request) {
+        match data.download_queue.try_enqueue(request) {
             Ok(_) => {
                 handle = ctx.reply(format!("Awaiting Download...")).await.ok();
             }
@@ -81,12 +85,15 @@ pub async fn embed(
                         .ok();
             }
             YtDlpEvent::Finished { id, path } => {
-                let attachment = CreateAttachment::path(path).await?; //can fail to open the file
-                let message = CreateMessage::new().content("").add_file(attachment);
+                let attachment = CreateAttachment::path(path).await?; //can fail to open the file, but not likely
+                let message = CreateMessage::new()
+                    .content(format!("[original link](<{}>)", original_url))
+                    .add_file(attachment);
                 ctx.channel_id()
                     .send_message(&ctx.http(), message)
                     .await
                     .ok();
+                break;
             }
             _ => { /*discard other events*/ }
         }

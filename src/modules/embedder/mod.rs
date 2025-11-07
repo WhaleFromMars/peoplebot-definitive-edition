@@ -1,6 +1,6 @@
 use crate::modules::embedder::model::{DownloadRequest, YtDlpEvent};
 use crate::{modules::embedder::model::EmbedderDataKey, prelude::*};
-use std::{path::PathBuf, process::Stdio};
+use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 mod commands;
@@ -110,10 +110,11 @@ async fn download(request: DownloadRequest) -> Result<()> {
             match event {
                 YtDlpEvent::Finished { id, path } => {
                     let _ = sender.send(YtDlpEvent::Finished { id, path });
-                    break;
+                    break; //match this variant to break early
                 }
                 other => {
                     let _ = sender.send(other);
+                    //send all others for them to handle
                 }
             }
         }
