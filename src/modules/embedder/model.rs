@@ -12,7 +12,6 @@ use url::Url;
 register_env!(EMBEDDER_CONCURRENCY_LIMIT, usize);
 register_env!(EMBEDDER_SIZE_LIMIT, u64);
 register_env!(EMBEDDER_MAX_QUEUE, Option<usize>);
-register_event_listener!(event_listener);
 
 pub struct DownloadQueue {
     sender: MPSCSender<DownloadRequest>,
@@ -90,17 +89,6 @@ register_global_data!(init);
 
 fn init(map: &mut TypeMap) {
     map.insert::<EmbedderDataKey>(Arc::new(Mutex::new(EmbedderData::new())));
-}
-
-async fn event_listener(
-    ctx: FrameworkContext<'_, GlobalState, Error>,
-    event: &FullEvent,
-) -> Result<()> {
-    match event {
-        FullEvent::CacheReady { guilds } => {}
-        _ => {}
-    }
-    Ok(())
 }
 
 #[derive(new)]
