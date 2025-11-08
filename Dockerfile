@@ -11,9 +11,7 @@ FROM rust:${RUST_VERSION}-slim-bookworm AS chef
 ARG DEBIAN_FRONTEND
 ENV DEBIAN_FRONTEND=${DEBIAN_FRONTEND}
 WORKDIR /app
-RUN --mount=type=cache,target=/var/lib/apt/lists \
-    --mount=type=cache,target=/var/cache/apt \
-    apt-get update \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     autoconf \
     automake \
@@ -52,9 +50,7 @@ FROM debian:bookworm-slim AS yt-dlp-fetcher
 ARG DEBIAN_FRONTEND
 ENV DEBIAN_FRONTEND=${DEBIAN_FRONTEND}
 ARG YT_DLP_VERSION
-RUN --mount=type=cache,target=/var/lib/apt/lists \
-    --mount=type=cache,target=/var/cache/apt \
-    apt-get update \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
@@ -77,19 +73,14 @@ ARG DEBIAN_FRONTEND
 ENV DEBIAN_FRONTEND=${DEBIAN_FRONTEND}
 ENV TZ=Etc/UTC
 ARG APP_USER=peoplebot
-RUN --mount=type=cache,target=/var/lib/apt/lists \
-    --mount=type=cache,target=/var/cache/apt \
-    set -eux; \
-    ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime || true; \
-    echo "${TZ}" > /etc/timezone || true; \
-    apt-get update \
+RUN ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime && echo "${TZ}" > /etc/timezone
+RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     ca-certificates \
     ffmpeg \
     libopus0 \
     python3 \
     tzdata \
-    && dpkg-reconfigure -f noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=yt-dlp-fetcher /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 WORKDIR /app
