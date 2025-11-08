@@ -79,6 +79,9 @@ ENV TZ=Etc/UTC
 ARG APP_USER=peoplebot
 RUN --mount=type=cache,target=/var/lib/apt/lists \
     --mount=type=cache,target=/var/cache/apt \
+    set -eux; \
+    ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime || true; \
+    echo "${TZ}" > /etc/timezone || true; \
     apt-get update \
     && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -86,6 +89,7 @@ RUN --mount=type=cache,target=/var/lib/apt/lists \
     libopus0 \
     python3 \
     tzdata \
+    && dpkg-reconfigure -f noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=yt-dlp-fetcher /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 WORKDIR /app
