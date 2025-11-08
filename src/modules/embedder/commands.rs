@@ -20,6 +20,7 @@ pub async fn embed(
     let anonymous = anonymous.unwrap_or(false);
     let strip_audio = strip_audio.unwrap_or(false);
     let url = Url::parse(&link)?;
+
     let original_url = url.clone(); //a copy we can use later
     let name = if anonymous {
         "anon".to_string()
@@ -90,11 +91,16 @@ pub async fn embed(
                 let message = CreateMessage::new()
                     .content(format!("-# sent by: {name} - [[link]](<{original_url}>)"))
                     .add_file(attachment);
+
                 ctx.channel_id()
                     .send_message(&ctx.http(), message)
                     .await
                     .ok(); //consume potential error
                 //theres nothing we can do if it fails to send, and we want to make sure to delete the file afterwards
+                if let Some(handle) = handle {
+                    //if we have a handle, try delete the message
+                    handle.delete(ctx).await.ok(); //ignore error, nothing we can do
+                }
 
                 if let Err(_) = remove_file(&path).await {
                     error!("Failed to remove file: {path}");

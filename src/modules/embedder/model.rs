@@ -17,6 +17,8 @@ register_env!(EMBEDDER_MAX_QUEUE, Option<usize>);
 register_env!(EMBEDDER_HOME_DIR, Option<PathBuf>);
 register_env!(EMBEDDER_TEMP_DIR, Option<PathBuf>);
 
+register_global_data!(init);
+
 pub const DEFAULT_HOME_DIR: &str = "./out";
 pub const DEFAULT_TEMP_DIR: &str = "./tmp";
 
@@ -91,8 +93,6 @@ pub struct EmbedderDataKey;
 impl TypeMapKey for EmbedderDataKey {
     type Value = Arc<Mutex<EmbedderData>>;
 }
-
-register_global_data!(init);
 
 fn init(map: &mut TypeMap) {
     map.insert::<EmbedderDataKey>(Arc::new(Mutex::new(EmbedderData::new())));

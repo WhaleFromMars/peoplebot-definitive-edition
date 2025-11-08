@@ -103,22 +103,52 @@ async fn download(request: DownloadRequest) -> Result<()> {
     let mut child = cmd.spawn()?;
 
     let stdout = child.stdout.take().expect("piped stdout");
-    // let stderr = child.stderr.take().expect("piped stderr");
-    let mut out_lines = BufReader::new(stdout).lines();
-    // let mut err_lines = BufReader::new(stderr).lines();
+    let stderr = child.stderr.take().expect("piped stderr");
 
-    while let Some(line) = out_lines.next_line().await? {
-        debug!("yt-dlp output: {}", line);
-        if let Ok(event) = serde_json::from_str::<YtDlpEvent>(&line) {
-            debug!("yt-dlp event: {:?}", event);
-            match event {
-                YtDlpEvent::Finished { id, path } => {
-                    let _ = sender.send(YtDlpEvent::Finished { id, path });
-                    break; //match this variant to break early
+    let mut out_lines = BufReader::new(stdout).lines();
+    let mut err_lines = BufReader::new(stderr).lines();
+
+    let mut stderr_closed = false;
+
+    loop {
+        tokio::select! {
+            //select will swap between handling stdout_line = {} and stderr_line = {}
+            // pseudorandomly if both have a line waiting, otherwise handles the one that has a line waiting
+            stdout_line = out_lines.next_line() => {
+                let Some(line) = stdout_line? else {
+                    // command finished
+                    break;
+                };
+
+                debug!("yt-dlp stdout: {}", line);
+
+                if let Ok(event) = serde_json::from_str::<YtDlpEvent>(&line) {
+                    debug!("yt-dlp event: {:?}", event);
+                    match event {
+                        YtDlpEvent::Finished { id, path } => {
+                            let _ = sender.send(YtDlpEvent::Finished { id, path });
+                            break; // match this variant to break early
+                        }
+                        other => {
+                            let _ = sender.send(other);
+                            // send all others for them to handle
+                        }
+                    }
                 }
-                other => {
-                    let _ = sender.send(other);
-                    //send all others for them to handle
+            }
+
+            stderr_line = err_lines.next_line(), if !stderr_closed => {
+                match stderr_line {
+                    Ok(Some(line)) => {
+                        debug!("yt-dlp stderr: {}", line);
+                    }
+                    Ok(None) => {
+                        stderr_closed = true;
+                    }
+                    Err(e) => {
+                        debug!("error reading yt-dlp stderr: {}", e);
+                        stderr_closed = true;
+                    }
                 }
             }
         }
