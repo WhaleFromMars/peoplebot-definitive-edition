@@ -1,91 +1,47 @@
-# syntax=docker/dockerfile:1.7
+# Stage 1: Rust build
+FROM rust:1.91-slim-bookworm as builder
 
-ARG RUST_VERSION=1.91
-ARG YT_DLP_VERSION=2025.10.22
-ARG DEBIAN_FRONTEND=noninteractive
-
-##
-## Builder: compile the Rust binary with cached dependencies.
-##
-FROM rust:${RUST_VERSION}-slim-bookworm AS chef
-ARG DEBIAN_FRONTEND
-ENV DEBIAN_FRONTEND=${DEBIAN_FRONTEND}
-WORKDIR /app
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    autoconf \
-    automake \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    clang \
-    cmake \
-    libopus-dev \
-    libssl-dev \
-    libtool \
-    m4 \
     pkg-config \
+    libssl-dev \
+    cmake \
     && rm -rf /var/lib/apt/lists/*
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    cargo install cargo-chef --locked
 
-FROM chef AS planner
-COPY Cargo.toml Cargo.lock ./
-COPY src src
-RUN cargo chef prepare --recipe-path recipe.json
-
-FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    cargo chef cook --release --recipe-path recipe.json
-COPY . .
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    cargo build --release --locked
-
-##
-## Dependency fetcher: download and verify yt-dlp once.
-##
-FROM debian:bookworm-slim AS yt-dlp-fetcher
-ARG DEBIAN_FRONTEND
-ENV DEBIAN_FRONTEND=${DEBIAN_FRONTEND}
-ARG YT_DLP_VERSION
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-RUN set -eux; \
-    tmpdir="$(mktemp -d)"; \
-    cd "${tmpdir}"; \
-    curl -L -o yt-dlp "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp"; \
-    curl -L -o SHA256SUMS "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/SHA256SUMS"; \
-    grep "  yt-dlp$" SHA256SUMS > SHA256SUMS.filtered; \
-    sha256sum -c SHA256SUMS.filtered; \
-    install -m 0755 yt-dlp /usr/local/bin/yt-dlp; \
-    rm -rf "${tmpdir}"
-
-##
-## Runtime: copy in the slim binary and run as a non-root user.
-##
-FROM debian:bookworm-slim AS runtime
-ARG DEBIAN_FRONTEND
-ENV DEBIAN_FRONTEND=${DEBIAN_FRONTEND}
-ENV TZ=Etc/UTC
-ARG APP_USER=peoplebot
-RUN ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime && echo "${TZ}" > /etc/timezone
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    ffmpeg \
-    libopus0 \
-    python3 \
-    tzdata \
-    && rm -rf /var/lib/apt/lists/*
-COPY --from=yt-dlp-fetcher /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 WORKDIR /app
-COPY --from=builder /app/target/release/peoplebot /usr/local/bin/peoplebot
-RUN useradd --system --create-home --shell /usr/sbin/nologin "${APP_USER}"
-RUN install -d -o "${APP_USER}" -g "${APP_USER}" /app/out /app/tmp
-USER ${APP_USER}
-ENTRYPOINT ["/usr/local/bin/peoplebot"]
+
+COPY . .
+
+RUN cargo build --release
+
+# Stage 2: Actual Runtime
+FROM debian:bookworm-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates wget xz-utils && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy Rust binary
+COPY --from=builder /app/target/release/peoplebot ./app
+
+# PINNED: yt-dlp binary (static)
+ENV YTDLP_TAG=2025.10.22
+
+RUN wget -O /usr/local/bin/yt-dlp \
+    https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_TAG}/yt-dlp_linux && \
+    chmod +x /usr/local/bin/yt-dlp
+
+# PINNED: FFmpeg static binary
+ENV FFMPEG_BUILD=ffmpeg-n8.0-32-g44bfe0da61-linux64-gpl-8.0
+ENV TAG=autobuild-2025-11-08-13-04
+
+RUN wget -O /tmp/${FFMPEG_BUILD}.tar.xz \
+    https://github.com/BtbN/FFmpeg-Builds/releases/download/${TAG}/${FFMPEG_BUILD}.tar.xz && \
+    tar -xf /tmp/${FFMPEG_BUILD}.tar.xz -C /tmp && \
+    mv /tmp/${FFMPEG_BUILD}/bin/ffmpeg /usr/local/bin/ffmpeg && \
+    chmod +x /usr/local/bin/ffmpeg && \
+    rm -rf /tmp/${FFMPEG_BUILD}*
+
+ENTRYPOINT ["./app"]
