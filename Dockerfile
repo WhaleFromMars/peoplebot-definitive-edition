@@ -2,11 +2,14 @@
 
 ARG RUST_VERSION=1.91
 ARG YT_DLP_VERSION=2025.10.22
+ARG DEBIAN_FRONTEND=noninteractive
 
 ##
 ## Builder: compile the Rust binary with cached dependencies.
 ##
 FROM rust:${RUST_VERSION}-slim-bookworm AS chef
+ARG DEBIAN_FRONTEND
+ENV DEBIAN_FRONTEND=${DEBIAN_FRONTEND}
 WORKDIR /app
 RUN --mount=type=cache,target=/var/lib/apt/lists \
     --mount=type=cache,target=/var/cache/apt \
@@ -46,6 +49,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 ## Dependency fetcher: download and verify yt-dlp once.
 ##
 FROM debian:bookworm-slim AS yt-dlp-fetcher
+ARG DEBIAN_FRONTEND
+ENV DEBIAN_FRONTEND=${DEBIAN_FRONTEND}
 ARG YT_DLP_VERSION
 RUN --mount=type=cache,target=/var/lib/apt/lists \
     --mount=type=cache,target=/var/cache/apt \
@@ -68,6 +73,9 @@ RUN set -eux; \
 ## Runtime: copy in the slim binary and run as a non-root user.
 ##
 FROM debian:bookworm-slim AS runtime
+ARG DEBIAN_FRONTEND
+ENV DEBIAN_FRONTEND=${DEBIAN_FRONTEND}
+ENV TZ=Etc/UTC
 ARG APP_USER=peoplebot
 RUN --mount=type=cache,target=/var/lib/apt/lists \
     --mount=type=cache,target=/var/cache/apt \
