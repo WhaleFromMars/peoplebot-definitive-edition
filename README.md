@@ -1,6 +1,11 @@
 ## Releases
 
-Publishing a GitHub release builds the pinned Docker image via `.github/workflows/release.yml` and pushes it to `ghcr.io/whalefrommars/peoplebot`.
+Publishing a GitHub release builds the pinned Docker image via `.github/workflows/release.yml` and pushes it to `ghcr.io/whalefrommars/peoplebot`. \
+Current image tags are:
+ - :main that tracks the latest commit.
+ - :latest that tracks the latest release.
+ - :vX.Y.Z that tracks a specific release version.
+ - :commitsha256 that tracks a specific commit.
 
 ## Required envs
 
