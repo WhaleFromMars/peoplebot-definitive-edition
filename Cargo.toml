@@ -20,7 +20,7 @@ futures = "0.3"
 # Discord frameworks
 poise = { git = "https://github.com/serenity-rs/poise", branch = "next" }
 serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next" }
-songbird = "0.5.0"
+songbird = "0.5"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -34,8 +34,9 @@ anyhow = "1.0"
 thiserror = "1.0"
 
 # Logging
-tracing = { version = "0.1", features = ["release_max_level_info"] }
+tracing = { version = "0.1", features = ["release_max_level_warn"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] } # reduces runtime perf hit, not sure if this makes any difference to the tracing one
 
 # Text Parsing
 regex = "1.12"
@@ -44,11 +45,14 @@ url = "2.5"
 # Storage Backend
 opendal = "0.54"
 
+# Database
+turso = "0.3"
+
 # Helpful Derives
 derive-new = "0.7"
 inventory = "0.3"
-uuid = "1.18.1"
-tokio-stream = "0.1.17"
+uuid = "1.18"
+tokio-stream = "0.1"
 
 
 [profile.dev]
