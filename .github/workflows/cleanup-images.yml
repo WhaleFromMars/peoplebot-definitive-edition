@@ -1,0 +1,116 @@
+name: Cleanup GHCR images
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # every night at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Cleanup old GHCR images
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;              // "whalefrommars"
+            const packageName = 'peoplebot-definitive-edition';
+            const keepShortShaImages = 30;
+
+            const releaseRegex = /^v\d+\.\d+\.\d+$/;       // vX.Y.Z
+            const shortShaRegex = /^[0-9a-f]{7}$/i;        // 7-char short SHA
+
+            async function fetchAllVersions() {
+              const perPage = 100;
+              let page = 1;
+              let all = [];
+
+              while (true) {
+                // if this moves to an org in future, change "users" to "orgs" below.
+                const res = await github.request(
+                  'GET /users/{username}/packages/{package_type}/{package_name}/versions',
+                  {
+                    username: owner,
+                    package_type: 'container',
+                    package_name: packageName,
+                    per_page: perPage,
+                    page
+                  }
+                );
+
+                if (!res.data.length) break;
+                all = all.concat(res.data);
+                page++;
+              }
+
+              return all;
+            }
+
+            core.info(`Fetching GHCR versions for ${owner}/${packageName}...`);
+            const versions = await fetchAllVersions();
+            core.info(`Found ${versions.length} versions.`);
+
+            const shortShaVersions = [];
+            const protectedVersions = [];
+
+            for (const v of versions) {
+              const tags = v.metadata?.container?.tags || [];
+              if (!tags.length) continue;
+
+              let isProtected = false;
+              let isShortSha = false;
+
+              for (const tag of tags) {
+                if (tag === 'latest' || tag === 'main' || releaseRegex.test(tag)) {
+                  isProtected = true;
+                }
+                if (shortShaRegex.test(tag)) {
+                  isShortSha = true;
+                }
+              }
+
+              if (isProtected) {
+                protectedVersions.push(v);
+                continue;
+              }
+
+              if (isShortSha) {
+                shortShaVersions.push(v);
+                continue;
+              }
+            }
+
+            core.info(`Protected versions (main/latest/releases): ${protectedVersions.length}`);
+            core.info(`Short-SHA versions found: ${shortShaVersions.length}`);
+
+            // Newest first
+            shortShaVersions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            const toKeep = shortShaVersions.slice(0, keepShortShaImages);
+            const toDelete = shortShaVersions.slice(keepShortShaImages);
+
+            core.info(`Keeping ${toKeep.length} short-SHA images.`);
+            core.info(`Deleting ${toDelete.length} old short-SHA images.`);
+
+            for (const v of toDelete) {
+              const id = v.id;
+              const tags = v.metadata?.container?.tags || [];
+              core.info(`Deleting version id=${id}, tags=[${tags.join(', ')}]`);
+
+              await github.request(
+                'DELETE /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}',
+                {
+                  username: owner,
+                  package_type: 'container',
+                  package_name: packageName,
+                  package_version_id: id
+                }
+              );
+            }
+
+            core.info('Cleanup complete.');
