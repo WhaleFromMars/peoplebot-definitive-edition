@@ -1,5 +1,5 @@
-# Stage 1: Rust build
-FROM rust:1.91-slim-bookworm as builder
+# ========= Stage 1: Chef (Rust + cargo-chef prebuilt) =========
+FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -10,11 +10,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# ========= Stage 2: Planner (compute recipe.json) =========
+FROM chef AS planner
+
+WORKDIR /app
+COPY . .
+
+RUN cargo chef prepare --recipe-path recipe.json
+
+# ========= Stage 3: Builder (cache deps + build app) =========
+FROM chef AS builder
+
+WORKDIR /app
+
+# 1) Restore the recipe and build only dependencies (cached layer)
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+# 2) Copy full source and build binary
 COPY . .
 
 RUN cargo build --release
 
-# Stage 2: Actual Runtime
+# ========= Stage 4: Runtime =========
 FROM debian:bookworm-slim
 
 RUN apt-get update && \
