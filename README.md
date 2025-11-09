@@ -1,6 +1,13 @@
 ## Releases
 
-Publishing a GitHub release builds the pinned Docker image via `.github/workflows/release.yml` and pushes it to `ghcr.io/whalefrommars/peoplebot`.
+Docker Images are built for this repo via `.github/workflows/release.yml` which pushes the image to `ghcr.io/whalefrommars/peoplebot`. \
+Current image tags are:
+- :main         – latest build from the main branch
+- :latest       – latest published release
+- :vX.Y.Z       – specific release version (e.g. :v1.2.3)
+- :short-sha    – image built from a specific main commit (7-char git SHA, e.g. :3f4a9c2)
+
+only the last 30 main commits are kept for :short-sha
 
 ## Required envs
 
