@@ -50,7 +50,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   build-release:
-    # Only run this job for releases
+    # Only run this job on releases
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
 
