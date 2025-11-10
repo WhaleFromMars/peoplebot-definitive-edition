@@ -49,6 +49,8 @@ pub(crate) const BASE_ARGS: &[&str] = &[
     "--progress",        // ensure progress ticks
     "--progress-delta",
     "3", //only report progress changes every 3 seconds
+    "--format-sort",
+    "ext:mp4,res:1440,fps",
     "--remux-video",
     "mp4",
     //start & progress events for downloading and post-processing
