@@ -51,7 +51,7 @@ pub(crate) const BASE_ARGS: &[&str] = &[
     "3", //only report progress changes every 3 seconds
     "--format-sort",
     "ext:mp4,res:1440,fps",
-    "--remux-video",
+    "--recode-video", //we can remux if theres ever a conditional "only recode if remux failed" in future
     "mp4",
     //start & progress events for downloading and post-processing
     "--print",
