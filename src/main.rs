@@ -1,15 +1,15 @@
 #![warn(clippy::pedantic, clippy::cargo, clippy::nursery)]
 
-use crate::{model::GlobalDataRegistry, prelude::*};
+use crate::{core::GlobalDataRegistry, prelude::*};
+use core::{EnvRegistry, EnvValidationError, StartupListenerRegistry};
 use dotenvy::dotenv;
 use futures::future::{join_all, try_join_all};
-use model::{EnvRegistry, EnvValidationError, StartupListenerRegistry};
 use poise::{Framework, FrameworkOptions};
 use tracing_subscriber::{EnvFilter, filter::LevelFilter, fmt};
 
+mod core;
 pub mod helpers;
 mod macros;
-mod model;
 mod modules;
 pub mod prelude;
 

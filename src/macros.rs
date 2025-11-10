@@ -18,13 +18,13 @@ macro_rules! register_commands {
       ($($command:path),+ $(,)?) => {
           const _: () = {
               fn __peoplebot_command_list() -> Vec<
-                  poise::Command<$crate::model::GlobalState, $crate::prelude::Error>
+                  poise::Command<$crate::core::GlobalState, $crate::prelude::Error>
               > {
                   vec![$($command()),+]
               }
 
               inventory::submit! {
-                  $crate::model::CommandRegistry(__peoplebot_command_list)
+                  $crate::core::CommandRegistry(__peoplebot_command_list)
               }
           };
       };
@@ -54,7 +54,7 @@ macro_rules! register_commands {
 /// This macro is just short hand for the following:
 /// ```
 /// inventory::submit! {
-///    peoplebot::model::EventListenerRegistry(event_listener)
+///    peoplebot::core::EventListenerRegistry(event_listener)
 ///}
 /// ```
 #[macro_export]
@@ -62,18 +62,14 @@ macro_rules! register_event_listener {
     ($handler:path) => {
         const _: () = {
             fn __peoplebot_event_wrapper<'a>(
-                ctx: poise::FrameworkContext<
-                    'a,
-                    $crate::model::GlobalState,
-                    $crate::prelude::Error,
-                >,
+                ctx: poise::FrameworkContext<'a, $crate::core::GlobalState, $crate::prelude::Error>,
                 event: &'a poise::serenity_prelude::FullEvent,
             ) -> ::futures::future::BoxFuture<'a, $crate::prelude::Result<()>> {
                 async move { $handler(ctx, event).await }.boxed()
             }
 
             ::inventory::submit! {
-                $crate::model::EventListenerRegistry(__peoplebot_event_wrapper)
+                $crate::core::EventListenerRegistry(__peoplebot_event_wrapper)
 
             }
         };
@@ -93,7 +89,7 @@ macro_rules! register_event_listener {
 /// This macro is just short hand for the following:
 /// ```
 /// inventory::submit! {
-///    peoplebot::model::StartupListenerRegistry(startup_listener)
+///    peoplebot::core::StartupListenerRegistry(startup_listener)
 ///}
 /// ```
 #[macro_export]
@@ -106,7 +102,7 @@ macro_rules! register_startup_listener {
             }
 
             ::inventory::submit! {
-                $crate::model::StartupListenerRegistry(__peoplebot_startup_wrapper)
+                $crate::core::StartupListenerRegistry(__peoplebot_startup_wrapper)
             }
         };
     };
@@ -179,7 +175,7 @@ macro_rules! register_startup_listener {
 /// This macro is just short hand for the following:
 /// ```
 /// inventory::submit! {
-///    peoplebot::model::GlobalDataRegistry(your_init_function)
+///    peoplebot::core::GlobalDataRegistry(your_init_function)
 ///}
 /// ```
 #[macro_export]
@@ -193,7 +189,7 @@ macro_rules! register_global_data {
             }
 
             ::inventory::submit! {
-                $crate::model::GlobalDataRegistry(__peoplebot_global_data_wrapper)
+                $crate::core::GlobalDataRegistry(__peoplebot_global_data_wrapper)
             }
         };
     };
@@ -233,16 +229,16 @@ macro_rules! register_env {
     // Optional form: Option<T>
     ($store:ident, Option<$ty:ty>) => {
         #[allow(non_upper_case_globals)]
-        pub static $store: $crate::model::EnvStore<Option<$ty>> =
-            $crate::model::EnvStore::new(stringify!($store));
+        pub static $store: $crate::core::EnvStore<Option<$ty>> =
+            $crate::core::EnvStore::new(stringify!($store));
 
         const _: () = {
             fn __peoplebot_env_wrapper() -> ::futures::future::BoxFuture<
                 'static,
-                std::result::Result<(), $crate::model::EnvError>,
+                std::result::Result<(), $crate::core::EnvError>,
             > {
                 ::std::boxed::Box::pin(async move {
-                    $crate::model::env::validate_env::<$crate::model::EnvStore<Option<$ty>>, $ty>(
+                    $crate::core::env::validate_env::<$crate::core::EnvStore<Option<$ty>>, $ty>(
                         &$store,
                     )
                     .await
@@ -250,7 +246,7 @@ macro_rules! register_env {
             }
 
             ::inventory::submit! {
-                $crate::model::EnvRegistry(__peoplebot_env_wrapper)
+                $crate::core::EnvRegistry(__peoplebot_env_wrapper)
             }
         };
     };
@@ -258,22 +254,22 @@ macro_rules! register_env {
     // Required form: T
     ($store:ident, $ty:ty) => {
         #[allow(non_upper_case_globals)]
-        pub static $store: $crate::model::EnvStore<$ty> =
-            $crate::model::EnvStore::new(stringify!($store));
+        pub static $store: $crate::core::EnvStore<$ty> =
+            $crate::core::EnvStore::new(stringify!($store));
 
         const _: () = {
             fn __peoplebot_env_wrapper() -> ::futures::future::BoxFuture<
                 'static,
-                std::result::Result<(), $crate::model::EnvError>,
+                std::result::Result<(), $crate::core::EnvError>,
             > {
                 ::std::boxed::Box::pin(async move {
-                    $crate::model::env::validate_env::<$crate::model::EnvStore<$ty>, $ty>(&$store)
+                    $crate::core::env::validate_env::<$crate::core::EnvStore<$ty>, $ty>(&$store)
                         .await
                 })
             }
 
             ::inventory::submit! {
-                $crate::model::EnvRegistry(__peoplebot_env_wrapper)
+                $crate::core::EnvRegistry(__peoplebot_env_wrapper)
             }
         };
     };
