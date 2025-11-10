@@ -49,6 +49,8 @@ pub(crate) const BASE_ARGS: &[&str] = &[
     "--progress",        // ensure progress ticks
     "--progress-delta",
     "3", //only report progress changes every 3 seconds
+    "--remux-video",
+    "mp4",
     //start & progress events for downloading and post-processing
     "--print",
     r#"before_dl:{"event":"DLStarted","id":"%(id)s"}"#,
