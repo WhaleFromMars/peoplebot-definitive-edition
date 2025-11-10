@@ -129,7 +129,7 @@ pub(crate) enum YtDlpEvent {
         eta: String,
     },
     // {"event":"moved","id":"...","path":"..."}
-    #[serde(rename = "moved")]
+    #[serde(rename = "finished")]
     Finished { id: String, path: String },
 
     // Unknown/forward-compat events fall here instead of erroring

@@ -48,7 +48,7 @@ pub(crate) const BASE_ARGS: &[&str] = &[
     "--no-warnings",     // less noise
     "--progress",        // ensure progress ticks
     "--progress-delta",
-    "1", //only report progress changes every 1 second
+    "3", //only report progress changes every 3 seconds
     //start & progress events for downloading and post-processing
     "--print",
     r#"before_dl:{"event":"dl_started","id":"%(id)s"}"#,
@@ -60,7 +60,7 @@ pub(crate) const BASE_ARGS: &[&str] = &[
     r#"postprocess:{"event":"pp_progress","id":"%(info.id)s","percent":"%(progress._percent_str)s","eta":"%(progress._eta_str)s"}"#,
     //Completion event
     "--print",
-    r#"after_move:{"event":"moved","id":"%(id)s","path":%(filepath)j}"#,
+    r#"after_move:{"event":"finished","id":"%(id)s","path":%(filepath)j}"#,
 ];
 
 const FORMAT_ARGS: &[&str] = &["-f", "bv*+ba/b"];
