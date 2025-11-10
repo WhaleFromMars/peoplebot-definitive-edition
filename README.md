@@ -1,3 +1,8 @@
+## PeopleBot - Definitive Edition
+Currently builds against:
+- ffmpeg - 8.0
+- yt_dlp - 2025.10.22
+
 ## Releases
 
 Docker Images are built for this repo via `.github/workflows/release.yml` which pushes the image to `ghcr.io/whalefrommars/peoplebot`. \
@@ -21,3 +26,14 @@ Non prefixed ENVs will not be used.
 - `DEV_GUILD_ID` – Guild ID used for fast slash-command registration during development (18-digit server ID).
 - `BOTH_EMBEDDER_SIZE_LIMIT` – Maximum number of bytes the embedder is allowed to download when enabled.
 - `BOTH_EMBEDDER_CONCURRENCY_LIMIT` – Concurrent download limit for the embedder module.
+
+## Roadmap
+
+- [ ] Wrap ffmpeg directly instead of using yt_dlps post processing, for better control
+- [ ] use a database for storing user preferences (default command flags) and guild specific settings/envs
+  - [ ] planned guild settings:
+    - [ ] prefix
+    - [ ] language
+    - [ ] toggle webm usage for embedder module (defaults to disabled atm)
+    - [ ] s3 url/auth key
+- [ ] s3 upload functionality for embedder module when the file size exceeds the guilds upload limit (each guild can specify their s3 instance/auth with the above)
