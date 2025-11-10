@@ -1,5 +1,5 @@
 # ========= Stage 1: Chef (Rust + cargo-chef prebuilt) =========
-FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1-slim-bookworm AS chef
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
