@@ -1,6 +1,9 @@
 #![warn(clippy::pedantic, clippy::cargo, clippy::nursery)]
 
-use crate::{core::GlobalDataRegistry, prelude::*};
+use crate::{
+    core::{GlobalDataRegistry, error::handle_error},
+    prelude::*,
+};
 use core::{EnvRegistry, EnvValidationError, StartupListenerRegistry};
 use dotenvy::dotenv;
 use futures::future::{join_all, try_join_all};
@@ -8,10 +11,11 @@ use poise::{Framework, FrameworkOptions};
 use tracing_subscriber::{EnvFilter, filter::LevelFilter, fmt};
 
 mod core;
-pub mod helpers;
-mod macros;
+pub(crate) mod helpers;
+#[macro_use]
+pub(crate) mod macros;
 mod modules;
-pub mod prelude;
+pub(crate) mod prelude;
 
 register_env!(DISCORD_TOKEN, String);
 register_env!(DEV_GUILD_ID, GuildId);
@@ -41,6 +45,7 @@ fn init_framework() -> Framework<GlobalState, Error> {
         .options(FrameworkOptions {
             commands: collect_commands(),
             event_handler: |framework, event| Box::pin(event_handler(framework, event)),
+            on_error: |error| Box::pin(handle_error(error)),
             ..Default::default()
         })
         .setup(move |ctx, _ready, framework| {
@@ -138,7 +143,7 @@ const DEFAULT_FILTER_DIRECTIVES: &str = "peoplebot=info,poise=info,serenity=info
 #[cfg(debug_assertions)]
 const DEFAULT_FILTER_DIRECTIVES: &str = "peoplebot=debug,poise=info,serenity=info,tokio=warn";
 
-pub fn init_tracing() {
+pub(crate) fn init_tracing() {
     let env_filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
         .parse_lossy(env::var("RUST_LOG").unwrap_or_else(|_| DEFAULT_FILTER_DIRECTIVES.into()));

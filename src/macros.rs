@@ -121,12 +121,12 @@ macro_rules! register_startup_listener {
 /// use std::sync::atomic::{AtomicUsize, Ordering};
 /// use tokio::sync::RwLock;
 ///
-/// pub struct YourCounters;
+/// pub(crate) struct YourCounters;
 /// impl TypeMapKey for YourCounters {
 ///     type Value = Arc<RwLock<HashMap<String, u64>>>;
 /// }
 ///
-/// pub struct YourTotalMessages;
+/// pub(crate) struct YourTotalMessages;
 /// impl TypeMapKey for YourTotalMessages {
 ///     type Value = Arc<AtomicUsize>;
 /// }
@@ -229,7 +229,7 @@ macro_rules! register_env {
     // Optional form: Option<T>
     ($store:ident, Option<$ty:ty>) => {
         #[allow(non_upper_case_globals)]
-        pub static $store: $crate::core::EnvStore<Option<$ty>> =
+        pub(crate) static $store: $crate::core::EnvStore<Option<$ty>> =
             $crate::core::EnvStore::new(stringify!($store));
 
         const _: () = {
@@ -254,7 +254,7 @@ macro_rules! register_env {
     // Required form: T
     ($store:ident, $ty:ty) => {
         #[allow(non_upper_case_globals)]
-        pub static $store: $crate::core::EnvStore<$ty> =
+        pub(crate) static $store: $crate::core::EnvStore<$ty> =
             $crate::core::EnvStore::new(stringify!($store));
 
         const _: () = {
@@ -272,5 +272,14 @@ macro_rules! register_env {
                 $crate::core::EnvRegistry(__peoplebot_env_wrapper)
             }
         };
+    };
+}
+
+/// Returns early from the current function with a [`crate::core::error::UserError`] that is safe to show to end users.
+/// Don't forget to delete any temporary ephemerals before calling this.
+#[macro_export]
+macro_rules! bail_to_user {
+    ($($arg:tt)*) => {
+        ::anyhow::bail!($crate::core::error::UserError(::anyhow::anyhow!($($arg)*)))
     };
 }

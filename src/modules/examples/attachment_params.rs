@@ -4,7 +4,7 @@ use crate::prelude::*;
 register_commands!(file_details, totalsize);
 
 #[command(prefix_command, slash_command)]
-pub async fn file_details(
+pub(crate) async fn file_details(
     ctx: Context<'_>,
     #[description = "File to examine"] file: Attachment,
     #[description = "Second file to examine"] file_2: Option<Attachment>,
@@ -19,7 +19,7 @@ pub async fn file_details(
 }
 
 #[command(prefix_command)]
-pub async fn totalsize(
+pub(crate) async fn totalsize(
     ctx: Context<'_>,
     #[description = "Files to evaluate"] files: Vec<Attachment>,
 ) -> Result<()> {

@@ -1,4 +1,4 @@
-pub mod embedder;
+pub(crate) mod embedder;
 #[cfg(debug_assertions)]
 mod examples;
 mod misc;

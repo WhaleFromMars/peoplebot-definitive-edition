@@ -3,12 +3,9 @@ use std::path::PathBuf;
 use crate::modules::embedder::download;
 use crate::prelude::*;
 use futures::StreamExt;
-use poise::serenity_prelude::prelude::{TypeMap, TypeMapKey};
-use serde::Deserialize;
 use tokio::{sync::Semaphore, task::JoinHandle};
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::sync::CancellationToken;
-use url::Url;
 
 //these are envs instead of a config as they should be set by whoever hosts the bot, not guild owners.
 register_env!(EMBEDDER_CONCURRENCY_LIMIT, usize);
@@ -19,17 +16,17 @@ register_env!(EMBEDDER_TEMP_DIR, Option<PathBuf>);
 
 register_global_data!(init);
 
-pub const DEFAULT_HOME_DIR: &str = "./out";
-pub const DEFAULT_TEMP_DIR: &str = "./tmp";
+pub(crate) const DEFAULT_HOME_DIR: &str = "./out";
+pub(crate) const DEFAULT_TEMP_DIR: &str = "./tmp";
 
-pub struct DownloadQueue {
+pub(crate) struct DownloadQueue {
     sender: MPSCSender<DownloadRequest>,
     handle: JoinHandle<()>,
     cancel: CancellationToken,
 }
 
 impl DownloadQueue {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let (sender, receiver) = mpsc::channel::<DownloadRequest>(
             EMBEDDER_MAX_QUEUE
                 .get()
@@ -56,40 +53,40 @@ impl DownloadQueue {
         }
     }
 
-    pub async fn enqueue(
+    pub(crate) async fn enqueue(
         &self,
         job: DownloadRequest,
     ) -> Result<(), mpsc::error::SendError<DownloadRequest>> {
         self.sender.send(job).await
     }
 
-    pub fn try_enqueue(
+    pub(crate) fn try_enqueue(
         &self,
         job: DownloadRequest,
     ) -> Result<(), mpsc::error::TrySendError<DownloadRequest>> {
         self.sender.try_send(job)
     }
 
-    pub async fn shutdown(self) {
+    pub(crate) async fn shutdown(self) {
         self.cancel.cancel();
         drop(self.sender);
         let _ = self.handle.await; //wait for any tasks to finish
     }
 }
 
-pub struct EmbedderData {
-    pub download_queue: DownloadQueue,
+pub(crate) struct EmbedderData {
+    pub(crate) download_queue: DownloadQueue,
 }
 
 impl EmbedderData {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             download_queue: DownloadQueue::new(),
         }
     }
 }
 
-pub struct EmbedderDataKey;
+pub(crate) struct EmbedderDataKey;
 impl TypeMapKey for EmbedderDataKey {
     type Value = Arc<Mutex<EmbedderData>>;
 }
@@ -99,15 +96,15 @@ fn init(map: &mut TypeMap) {
 }
 
 #[derive(new)]
-pub struct DownloadRequest {
-    pub url: Url,
-    pub strip_audio: bool,
-    pub sender: WatchSender<YtDlpEvent>,
+pub(crate) struct DownloadRequest {
+    pub(crate) url: Url,
+    pub(crate) strip_audio: bool,
+    pub(crate) sender: WatchSender<YtDlpEvent>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "event")]
-pub enum YtDlpEvent {
+pub(crate) enum YtDlpEvent {
     // {"event":"dl_started","id":"..."}
     #[serde(rename = "dl_started")]
     DLStarted { id: String },

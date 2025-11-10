@@ -1,8 +1,9 @@
-use std::{env, fmt::Display, str::FromStr, sync::OnceLock};
+use crate::prelude::*;
+use std::sync::OnceLock;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum EnvError {
+pub(crate) enum EnvError {
     #[error("Environment variable {var} must be set")]
     Missing { var: &'static str },
     #[error("Environment variable {var} is invalid: {reason}")]
@@ -13,12 +14,12 @@ pub enum EnvError {
 
 #[derive(Debug, Error)]
 #[error("Environment validation failed:\n{details}")]
-pub struct EnvValidationError {
+pub(crate) struct EnvValidationError {
     details: String,
 }
 
 impl EnvValidationError {
-    pub fn from_errors(errors: Vec<EnvError>) -> Self {
+    pub(crate) fn from_errors(errors: Vec<EnvError>) -> Self {
         let details = errors
             .into_iter()
             .map(|err| format!("- {}", err))
@@ -28,31 +29,31 @@ impl EnvValidationError {
     }
 }
 
-pub struct EnvStore<T> {
+pub(crate) struct EnvStore<T> {
     base_key: &'static str,
     value: OnceLock<T>,
 }
 
 impl<T> EnvStore<T> {
-    pub const fn new(base_key: &'static str) -> Self {
+    pub(crate) const fn new(base_key: &'static str) -> Self {
         Self {
             base_key,
             value: OnceLock::new(),
         }
     }
 
-    pub const fn base_key(&self) -> &'static str {
+    pub(crate) const fn base_key(&self) -> &'static str {
         self.base_key
     }
 
-    pub fn set(&self, value: T) -> Result<(), EnvError> {
+    pub(crate) fn set(&self, value: T) -> Result<(), EnvError> {
         self.value
             .set(value)
             .map_err(|_| EnvError::AlreadySet { var: self.base_key })
     }
 
     /// Get the initialized value (panics if not set).
-    pub fn get(&self) -> &T {
+    pub(crate) fn get(&self) -> &T {
         self.value.get().unwrap_or_else(|| {
             panic!(
                 "Environment variable {} should have been initialized during startup validation",
@@ -89,7 +90,7 @@ fn has_any_prefix(s: &str) -> bool {
 /// - PROD_* => only in release
 /// - BOTH_* => always
 /// - unprefixed => always (since we’ll resolve to DEV_/PROD_/BOTH_)
-pub fn active_for_build(base_key: &'static str) -> bool {
+pub(crate) fn active_for_build(base_key: &'static str) -> bool {
     if is_dev(base_key) {
         cfg!(debug_assertions)
     } else if is_prod(base_key) {
@@ -102,7 +103,7 @@ pub fn active_for_build(base_key: &'static str) -> bool {
 }
 
 /// if `name` is unprefixed, synthesize the *prefixed* expected key for the build (not including BOTH_)
-pub fn prefixed_key_for(base_key: &'static str) -> &'static str {
+pub(crate) fn prefixed_key_for(base_key: &'static str) -> &'static str {
     if has_any_prefix(base_key) {
         return base_key;
     }
@@ -118,7 +119,7 @@ pub fn prefixed_key_for(base_key: &'static str) -> &'static str {
 /// - If `name` is unprefixed:
 ///     * debug: check DEV_<name>, else BOTH_<name>
 ///     * release: check PROD_<name>, else BOTH_<name>
-pub fn pick_existing_key(name: &'static str) -> Option<&'static str> {
+pub(crate) fn pick_existing_key(name: &'static str) -> Option<&'static str> {
     if has_any_prefix(name) {
         return env::var_os(name).map(|_| name);
     }
@@ -138,7 +139,7 @@ pub fn pick_existing_key(name: &'static str) -> Option<&'static str> {
     }
 }
 
-pub trait EnvTarget<U> {
+pub(crate) trait EnvTarget<U> {
     const OPTIONAL: bool;
 
     fn base_key(&self) -> &'static str;
@@ -209,7 +210,7 @@ fn not_unicode(var: &'static str, val: std::ffi::OsString) -> EnvError {
 /// - If OPTIONAL: missing/empty ⇒ store None and return Ok.
 /// - If REQUIRED: missing ⇒ Missing error.
 /// - UTF-8 / parse errors always error.
-pub async fn validate_env<S, U>(store: &'static S) -> Result<(), EnvError>
+pub(crate) async fn validate_env<S, U>(store: &'static S) -> Result<(), EnvError>
 where
     S: EnvTarget<U>,
     U: FromStr,

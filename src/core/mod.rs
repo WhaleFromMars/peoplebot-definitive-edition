@@ -1,16 +1,16 @@
-pub mod env;
+pub(crate) mod env;
+pub(crate) mod error;
 
-pub use env::{EnvError, EnvStore, EnvValidationError};
+pub(crate) use env::{EnvError, EnvStore, EnvValidationError};
 use futures::future::BoxFuture;
 use songbird::Songbird;
-use std::sync::Arc;
 
 use crate::prelude::*;
 
-pub type Context<'a> = poise::Context<'a, GlobalState, Error>;
+pub(crate) type Context<'a> = poise::Context<'a, GlobalState, Error>;
 
-pub struct GlobalState {
-    pub songbird: Arc<Songbird>,
+pub(crate) struct GlobalState {
+    pub(crate) songbird: Arc<Songbird>,
 }
 
 impl Default for GlobalState {
@@ -21,22 +21,37 @@ impl Default for GlobalState {
     }
 }
 
-pub struct GlobalDataRegistry(pub fn(&mut TypeMap));
+pub(crate) struct GlobalDataRegistry(pub(crate) fn(&mut TypeMap));
 inventory::collect!(GlobalDataRegistry);
 
-pub struct CommandRegistry(pub fn() -> Vec<Command<GlobalState, Error>>);
+pub(crate) struct CommandRegistry(pub(crate) fn() -> Vec<Command<GlobalState, Error>>);
 inventory::collect!(CommandRegistry);
 
-pub struct StartupListenerRegistry(pub fn() -> BoxFuture<'static, Result<()>>);
+pub(crate) struct StartupListenerRegistry(pub(crate) fn() -> BoxFuture<'static, Result<()>>);
 inventory::collect!(StartupListenerRegistry);
 
-pub struct EnvRegistry(pub fn() -> BoxFuture<'static, std::result::Result<(), EnvError>>);
+pub(crate) struct EnvRegistry(
+    pub(crate) fn() -> BoxFuture<'static, std::result::Result<(), EnvError>>,
+);
 inventory::collect!(EnvRegistry);
 
-pub struct EventListenerRegistry(
-    pub  for<'a> fn(
+pub(crate) struct EventListenerRegistry(
+    pub(crate)  for<'a> fn(
         FrameworkContext<'a, GlobalState, Error>,
         &'a FullEvent,
     ) -> BoxFuture<'a, Result<()>>,
 );
 inventory::collect!(EventListenerRegistry);
+
+pub(crate) trait DeleteHandle<'a> {
+    async fn delete(&self, ctx: Context<'a>) -> Result<(), Error>;
+}
+
+impl<'a> DeleteHandle<'a> for Option<ReplyHandle<'a>> {
+    async fn delete(&self, ctx: Context<'a>) -> Result<(), Error> {
+        if let Some(handle) = self {
+            handle.delete(ctx).await?;
+        }
+        Ok(())
+    }
+}

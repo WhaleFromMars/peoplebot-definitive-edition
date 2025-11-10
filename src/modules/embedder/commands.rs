@@ -1,20 +1,10 @@
-use std::path::PathBuf;
-
-use crate::{
-    modules::embedder::model::{DownloadRequest, EmbedderDataKey, YtDlpEvent},
-    prelude::*,
-};
-use poise::{CreateReply, ReplyHandle};
-use tokio::{
-    fs::{self, remove_file},
-    sync::watch,
-};
-use url::Url;
+use crate::{modules::embedder::model::*, prelude::*};
+use tokio::fs;
 
 register_commands!(embed);
 
 #[command(slash_command, prefix_command)]
-pub async fn embed(
+pub(crate) async fn embed(
     ctx: Context<'_>,
     link: String,
     #[description = "Whether to embed the link anonymously"] anonymous: Option<bool>,
@@ -57,12 +47,7 @@ pub async fn embed(
                 handle = ctx.reply(format!("Awaiting Download...")).await.ok();
             }
             Err(_) => {
-                handle = ctx
-                    .reply(format!(
-                        "Failed to queue download, server might be overloaded"
-                    ))
-                    .await
-                    .ok();
+                bail_to_user!("Failed to queue download, server might be overloaded");
             }
         }
     }
@@ -95,20 +80,14 @@ pub async fn embed(
                 let file_size = fs::metadata(&path).await?;
                 let guild_limit = attachment_byte_limit(&ctx, ctx.guild_id());
                 if file_size.len() > guild_limit {
-                    // this should be a new message so we can ping them with a fail
-                    // or return as an error variant and use the global on error handled to match the variant and handle it there
-                    handle = edit_or_send_new(
-                        &ctx,
-                        handle,
-                        format!(
-                            "File too large, server limit is {} MB, file size is {} MB",
-                            guild_limit / 1024 / 1024,
-                            file_size.len() / 1024 / 1024
-                        ),
-                    )
-                    .await
-                    .ok();
-                    break;
+                    fs::remove_file(&path).await.ok();
+                    handle.delete(ctx).await.ok();
+
+                    bail_to_user!(
+                        "File for [[link]](<{original_url}>) too large, server limit is {}, file size is {}",
+                        format_bytes(guild_limit),
+                        format_bytes(file_size.len())
+                    );
                 }
                 let attachment = CreateAttachment::path(&path).await?; //can fail to open the file, but not likely
 
@@ -121,13 +100,10 @@ pub async fn embed(
                     .await
                     .ok(); //consume potential error
                 //theres nothing we can do if it fails to send, and we want to make sure to delete the file afterwards
-                if let Some(handle) = handle {
-                    //if we have a handle, try delete the message
-                    handle.delete(ctx).await.ok(); //ignore error, nothing we can do
-                }
+                handle.delete(ctx).await.ok();
 
-                if let Err(_) = remove_file(&path).await {
-                    error!("Failed to remove file: {path}");
+                if let Err(_) = fs::remove_file(&path).await {
+                    error!("Failed to remove file: {path}"); //we dont bail because the core logic still succeeded
                 }
                 break;
             }
@@ -136,32 +112,4 @@ pub async fn embed(
     }
 
     Ok(())
-}
-
-/// Edit an existing message or send a new one if the handle has expired
-/// Will only return an error if a new message cannot be sent
-async fn edit_or_send_new<'a>(
-    ctx: &Context<'a>,
-    handle: Option<ReplyHandle<'a>>,
-    content: impl Into<String>,
-) -> Result<ReplyHandle<'a>> {
-    let content = content.into();
-
-    if let Some(handle) = handle {
-        match handle
-            .edit(*ctx, CreateReply::new().content(&content))
-            .await
-        {
-            Ok(_) => Ok(handle),
-            Err(_) => {
-                // The handle has expired; send a new message.
-                let handle = ctx.say(&content).await?;
-                Ok(handle)
-            }
-        }
-    } else {
-        // No existing handle; just send a new message.
-        let handle = ctx.say(&content).await?;
-        Ok(handle)
-    }
 }

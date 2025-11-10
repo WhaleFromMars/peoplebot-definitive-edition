@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 /// Returns the maximum attachment size limit for a guild.
-pub fn attachment_byte_limit(ctx: &Context, guild_id: Option<GuildId>) -> u64 {
+pub(crate) fn attachment_byte_limit(ctx: &Context, guild_id: Option<GuildId>) -> u64 {
     let tier = guild_id
         .and_then(|id| {
             ctx.serenity_context()
@@ -20,7 +20,7 @@ pub fn attachment_byte_limit(ctx: &Context, guild_id: Option<GuildId>) -> u64 {
 }
 
 /// Formats a byte count into a human-readable string.
-pub fn format_bytes(bytes: u64) -> String {
+pub(crate) fn format_bytes(bytes: u64) -> String {
     //least overengineered helper, thanks claude
     const UNITS: [(&str, u64); 6] = [
         ("PB", 1_000_000_000_000_000),
@@ -70,4 +70,32 @@ pub fn format_bytes(bytes: u64) -> String {
 
     // Should be unreachable, as "B" with factor 1 catches everything > 0
     "0 B".to_string()
+}
+
+/// Edit an existing message or send a new one if the handle has expired
+/// Will only return an error if a new message cannot be sent
+pub(crate) async fn edit_or_send_new<'a>(
+    ctx: &Context<'a>,
+    handle: Option<ReplyHandle<'a>>,
+    content: impl Into<String>,
+) -> Result<ReplyHandle<'a>> {
+    let content = content.into();
+
+    if let Some(handle) = handle {
+        match handle
+            .edit(*ctx, CreateReply::new().content(&content))
+            .await
+        {
+            Ok(_) => Ok(handle),
+            Err(_) => {
+                // The handle has expired; send a new message.
+                let handle = ctx.say(&content).await?;
+                Ok(handle)
+            }
+        }
+    } else {
+        // No existing handle; just send a new message.
+        let handle = ctx.say(&content).await?;
+        Ok(handle)
+    }
 }
