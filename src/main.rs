@@ -7,7 +7,7 @@ use model::{EnvRegistry, EnvValidationError, StartupListenerRegistry};
 use poise::{Framework, FrameworkOptions};
 use tracing_subscriber::{EnvFilter, filter::LevelFilter, fmt};
 
-mod helpers;
+pub mod helpers;
 mod macros;
 mod model;
 mod modules;

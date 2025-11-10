@@ -1,7 +1,7 @@
 pub use crate::model::{CommandRegistry, Context, EnvStore, EventListenerRegistry, GlobalState};
 pub use crate::{
-    register_commands, register_env, register_event_listener, register_global_data,
-    register_startup_listener,
+    helpers::attachment_byte_limit, register_commands, register_env, register_event_listener,
+    register_global_data, register_startup_listener,
 };
 pub use anyhow::{Error, Result, bail};
 pub use derive_new::new;

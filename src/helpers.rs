@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-fn attachment_byte_limit(ctx: &Context, guild_id: Option<GuildId>) -> u64 {
+pub fn attachment_byte_limit(ctx: &Context, guild_id: Option<GuildId>) -> u64 {
     let tier = guild_id
         .and_then(|id| {
             ctx.serenity_context()

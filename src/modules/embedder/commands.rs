@@ -1,9 +1,14 @@
+use std::path::PathBuf;
+
 use crate::{
     modules::embedder::model::{DownloadRequest, EmbedderDataKey, YtDlpEvent},
     prelude::*,
 };
 use poise::{CreateReply, ReplyHandle};
-use tokio::{fs::remove_file, sync::watch};
+use tokio::{
+    fs::{self, remove_file},
+    sync::watch,
+};
 use url::Url;
 
 register_commands!(embed);
@@ -87,7 +92,26 @@ pub async fn embed(
                     .ok();
             }
             YtDlpEvent::Finished { path, .. } => {
+                let file_size = fs::metadata(&path).await?;
+                let guild_limit = attachment_byte_limit(&ctx, ctx.guild_id());
+                if file_size.len() > guild_limit {
+                    // this should be a new message so we can ping them with a fail
+                    // or return as an error variant and use the global on error handled to match the variant and handle it there
+                    handle = edit_or_send_new(
+                        &ctx,
+                        handle,
+                        format!(
+                            "File too large, server limit is {} MB, file size is {} MB",
+                            guild_limit / 1024 / 1024,
+                            file_size.len() / 1024 / 1024
+                        ),
+                    )
+                    .await
+                    .ok();
+                    break;
+                }
                 let attachment = CreateAttachment::path(&path).await?; //can fail to open the file, but not likely
+
                 let message = CreateMessage::new()
                     .content(format!("-# sent by: {name} - [[link]](<{original_url}>)"))
                     .add_file(attachment);
