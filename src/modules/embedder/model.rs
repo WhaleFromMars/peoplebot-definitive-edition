@@ -105,32 +105,26 @@ pub(crate) struct DownloadRequest {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "event")]
 pub(crate) enum YtDlpEvent {
-    // {"event":"dl_started","id":"..."}
-    #[serde(rename = "dl_started")]
-    DLStarted { id: String },
-
-    // {"event":"dl_progress","id":"...","percent":"12.3%","eta":"42"}
-    #[serde(rename = "dl_progress")]
+    DLStarted {
+        id: String,
+    },
     DLProgress {
         id: String,
         percent: String,
         eta: String,
     },
-
-    // {"event":"pp_started","id":"..."}
-    #[serde(rename = "pp_started")]
-    PPStarted { id: String },
-
-    // {"event":"pp_progress","id":"...","percent":"4.2%","eta":"7"}
-    #[serde(rename = "pp_progress")]
+    PPStarted {
+        id: String,
+    },
     PPProgress {
         id: String,
         percent: String,
         eta: String,
     },
-    // {"event":"moved","id":"...","path":"..."}
-    #[serde(rename = "finished")]
-    Finished { id: String, path: String },
+    Finished {
+        id: String,
+        path: String,
+    },
 
     // Unknown/forward-compat events fall here instead of erroring
     #[serde(other)]

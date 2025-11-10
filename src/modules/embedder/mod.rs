@@ -51,16 +51,16 @@ pub(crate) const BASE_ARGS: &[&str] = &[
     "3", //only report progress changes every 3 seconds
     //start & progress events for downloading and post-processing
     "--print",
-    r#"before_dl:{"event":"dl_started","id":"%(id)s"}"#,
+    r#"before_dl:{"event":"DLStarted","id":"%(id)s"}"#,
     "--progress-template",
-    r#"download:{"event":"dl_progress","id":"%(info.id)s","percent":"%(progress._percent_str)s","eta":"%(progress._eta_str)s"}"#,
+    r#"download:{"event":"DLProgress","id":"%(info.id)s","percent":"%(progress._percent_str)s","eta":"%(progress._eta_str)s"}"#,
     "--print",
-    r#"post_process:{"event":"pp_started","id":"%(id)s"}"#,
+    r#"post_process:{"event":"PPStarted","id":"%(id)s"}"#,
     "--progress-template",
-    r#"postprocess:{"event":"pp_progress","id":"%(info.id)s","percent":"%(progress._percent_str)s","eta":"%(progress._eta_str)s"}"#,
+    r#"postprocess:{"event":"PPProgress","id":"%(info.id)s","percent":"%(progress._percent_str)s","eta":"%(progress._eta_str)s"}"#,
     //Completion event
     "--print",
-    r#"after_move:{"event":"finished","id":"%(id)s","path":%(filepath)j}"#,
+    r#"after_move:{"event":"Finished","id":"%(id)s","path":%(filepath)j}"#,
 ];
 
 const FORMAT_ARGS: &[&str] = &["-f", "bv*+ba/b"];
