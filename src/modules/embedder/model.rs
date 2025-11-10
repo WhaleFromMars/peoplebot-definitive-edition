@@ -130,3 +130,7 @@ pub(crate) enum YtDlpEvent {
     #[serde(other)]
     Unknown,
 }
+
+pub(crate) enum YtDlpError {
+    Unknown,
+}
