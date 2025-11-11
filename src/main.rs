@@ -11,11 +11,11 @@ use poise::{Framework, FrameworkOptions};
 use tracing_subscriber::{EnvFilter, filter::LevelFilter, fmt};
 
 mod core;
-pub(crate) mod helpers;
+pub mod helpers;
 #[macro_use]
-pub(crate) mod macros;
+pub mod macros;
 mod modules;
-pub(crate) mod prelude;
+pub mod prelude;
 
 register_env!(DISCORD_TOKEN, String);
 register_env!(DEV_GUILD_ID, GuildId);
@@ -143,7 +143,7 @@ const DEFAULT_FILTER_DIRECTIVES: &str = "peoplebot=info,poise=info,serenity=info
 #[cfg(debug_assertions)]
 const DEFAULT_FILTER_DIRECTIVES: &str = "peoplebot=debug,poise=info,serenity=info,tokio=warn";
 
-pub(crate) fn init_tracing() {
+pub fn init_tracing() {
     let env_filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
         .parse_lossy(env::var("RUST_LOG").unwrap_or_else(|_| DEFAULT_FILTER_DIRECTIVES.into()));

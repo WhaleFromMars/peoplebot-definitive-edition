@@ -6,7 +6,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 #[error(transparent)]
-pub(crate) struct UserError(#[from] pub(crate) anyhow::Error);
+pub struct UserError(#[from] pub anyhow::Error);
 
 impl From<String> for UserError {
     fn from(value: String) -> Self {
@@ -22,7 +22,7 @@ impl FromStr for UserError {
     }
 }
 
-pub(crate) fn handle_error(
+pub fn handle_error(
     error: FrameworkError<'_, GlobalState, anyhow::Error>,
 ) -> BoxFuture<'_, ()> {
     Box::pin(async move {
@@ -32,7 +32,7 @@ pub(crate) fn handle_error(
     })
 }
 
-pub(crate) async fn try_handle_error(
+pub async fn try_handle_error(
     error: FrameworkError<'_, GlobalState, anyhow::Error>,
 ) -> Result<(), anyhow::Error> {
     match error {

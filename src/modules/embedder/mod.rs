@@ -42,7 +42,7 @@ async fn check_deps() -> Result<()> {
     }
 }
 
-pub(crate) const BASE_ARGS: &[&str] = &[
+pub const BASE_ARGS: &[&str] = &[
     "--no-sponsorblock", // cleaner output
     "--newline",         // one event per line
     "--no-warnings",     // less noise
@@ -69,7 +69,7 @@ pub(crate) const BASE_ARGS: &[&str] = &[
 
 const FORMAT_ARGS: &[&str] = &["-f", "bv*+ba/b"];
 
-pub(crate) fn yt_dlp_storage_args() -> (String, String) {
+pub fn yt_dlp_storage_args() -> (String, String) {
     let home = EMBEDDER_HOME_DIR
         .get()
         .clone()

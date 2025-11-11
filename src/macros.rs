@@ -121,12 +121,12 @@ macro_rules! register_startup_listener {
 /// use std::sync::atomic::{AtomicUsize, Ordering};
 /// use tokio::sync::RwLock;
 ///
-/// pub(crate) struct YourCounters;
+/// pub struct YourCounters;
 /// impl TypeMapKey for YourCounters {
 ///     type Value = Arc<RwLock<HashMap<String, u64>>>;
 /// }
 ///
-/// pub(crate) struct YourTotalMessages;
+/// pub struct YourTotalMessages;
 /// impl TypeMapKey for YourTotalMessages {
 ///     type Value = Arc<AtomicUsize>;
 /// }
@@ -229,7 +229,7 @@ macro_rules! register_env {
     // Optional form: Option<T>
     ($store:ident, Option<$ty:ty>) => {
         #[allow(non_upper_case_globals)]
-        pub(crate) static $store: $crate::core::EnvStore<Option<$ty>> =
+        pub static $store: $crate::core::EnvStore<Option<$ty>> =
             $crate::core::EnvStore::new(stringify!($store));
 
         const _: () = {
@@ -254,7 +254,7 @@ macro_rules! register_env {
     // Required form: T
     ($store:ident, $ty:ty) => {
         #[allow(non_upper_case_globals)]
-        pub(crate) static $store: $crate::core::EnvStore<$ty> =
+        pub static $store: $crate::core::EnvStore<$ty> =
             $crate::core::EnvStore::new(stringify!($store));
 
         const _: () = {

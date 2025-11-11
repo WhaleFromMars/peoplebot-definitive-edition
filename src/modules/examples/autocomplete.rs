@@ -27,7 +27,7 @@ async fn autocomplete_number(_ctx: Context<'_>, _partial: &str) -> CreateAutocom
 
 /// Greet a user. Showcasing autocomplete!
 #[command(slash_command)]
-pub(crate) async fn greet(
+pub async fn greet(
     ctx: Context<'_>,
     #[description = "Who to greet"]
     #[autocomplete = "autocomplete_name"]

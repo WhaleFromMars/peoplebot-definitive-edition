@@ -4,7 +4,7 @@ use tokio::fs;
 register_commands!(embed);
 
 #[command(slash_command, prefix_command)]
-pub(crate) async fn embed(
+pub async fn embed(
     ctx: Context<'_>,
     link: String,
     #[description = "Whether to embed the link anonymously"] anonymous: Option<bool>,

@@ -16,17 +16,17 @@ register_env!(EMBEDDER_TEMP_DIR, Option<PathBuf>);
 
 register_global_data!(init);
 
-pub(crate) const DEFAULT_HOME_DIR: &str = "./out";
-pub(crate) const DEFAULT_TEMP_DIR: &str = "./tmp";
+pub const DEFAULT_HOME_DIR: &str = "./out";
+pub const DEFAULT_TEMP_DIR: &str = "./tmp";
 
-pub(crate) struct DownloadQueue {
+pub struct DownloadQueue {
     sender: MPSCSender<DownloadRequest>,
     handle: JoinHandle<()>,
     cancel: CancellationToken,
 }
 
 impl DownloadQueue {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         let (sender, receiver) = mpsc::channel::<DownloadRequest>(
             EMBEDDER_MAX_QUEUE
                 .get()
@@ -53,40 +53,40 @@ impl DownloadQueue {
         }
     }
 
-    pub(crate) async fn enqueue(
+    pub async fn enqueue(
         &self,
         job: DownloadRequest,
     ) -> Result<(), mpsc::error::SendError<DownloadRequest>> {
         self.sender.send(job).await
     }
 
-    pub(crate) fn try_enqueue(
+    pub fn try_enqueue(
         &self,
         job: DownloadRequest,
     ) -> Result<(), mpsc::error::TrySendError<DownloadRequest>> {
         self.sender.try_send(job)
     }
 
-    pub(crate) async fn shutdown(self) {
+    pub async fn shutdown(self) {
         self.cancel.cancel();
         drop(self.sender);
         let _ = self.handle.await; //wait for any tasks to finish
     }
 }
 
-pub(crate) struct EmbedderData {
-    pub(crate) download_queue: DownloadQueue,
+pub struct EmbedderData {
+    pub download_queue: DownloadQueue,
 }
 
 impl EmbedderData {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             download_queue: DownloadQueue::new(),
         }
     }
 }
 
-pub(crate) struct EmbedderDataKey;
+pub struct EmbedderDataKey;
 impl TypeMapKey for EmbedderDataKey {
     type Value = Arc<Mutex<EmbedderData>>;
 }
@@ -96,15 +96,15 @@ fn init(map: &mut TypeMap) {
 }
 
 #[derive(new)]
-pub(crate) struct DownloadRequest {
-    pub(crate) url: Url,
-    pub(crate) strip_audio: bool,
-    pub(crate) sender: WatchSender<YtDlpEvent>,
+pub struct DownloadRequest {
+    pub url: Url,
+    pub strip_audio: bool,
+    pub sender: WatchSender<YtDlpEvent>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "event")]
-pub(crate) enum YtDlpEvent {
+pub enum YtDlpEvent {
     DLStarted {
         id: String,
     },
@@ -131,6 +131,6 @@ pub(crate) enum YtDlpEvent {
     Unknown,
 }
 
-pub(crate) enum YtDlpError {
+pub enum YtDlpError {
     Unknown,
 }
