@@ -22,11 +22,17 @@ async fn check_deps() -> Result<()> {
             .await
     };
     let ff = async { ProcessCommand::new("ffmpeg").arg("-version").output().await };
+    let deno = async { ProcessCommand::new("deno").arg("--version").output().await };
 
-    let (yt_res, ff_res) = join!(yt, ff);
+    let (yt_res, ff_res, deno_res) = join!(yt, ff, deno);
 
     let yt_ok = yt_res.is_ok_and(|o| o.status.success());
     let ff_ok = ff_res.is_ok_and(|o| o.status.success());
+    let deno_ok = deno_res.is_ok_and(|o| o.status.success());
+
+    if !deno_ok {
+        warn!("Optional Dep Missing: deno, youtube links may fail to embed");
+    }
 
     if yt_ok && ff_ok {
         Ok(())
@@ -38,7 +44,10 @@ async fn check_deps() -> Result<()> {
         if !ff_ok {
             missing.push("ffmpeg");
         }
-        bail!("missing deps: {}", missing.join(", "));
+        if !deno_ok {
+            missing.push("Optional Dep Missing: deno");
+        }
+        bail!("Missing Deps: {}", missing.join(", "));
     }
 }
 
