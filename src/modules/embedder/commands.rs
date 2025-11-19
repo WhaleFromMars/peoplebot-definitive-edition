@@ -83,8 +83,12 @@ pub async fn embed(
                     fs::remove_file(&path).await.ok();
                     handle.delete(ctx).await.ok();
 
+                    let reply = CreateMessage::new() //dont use <> to allow it to embed if provider supports it, as we failed to
+                        .content(format!("-# sent by: {name} - [[link]]({original_url})"));
+                    ctx.channel_id().send_message(&ctx.http(), reply).await.ok();
+
                     bail_to_user!(
-                        "File for [[link]](<{original_url}>) too large, server limit is {}, file size is {}",
+                        "File for [[link]](<{original_url}>) too large to embed, server limit is {}, file size is {}, sent link instead",
                         format_bytes(guild_limit),
                         format_bytes(file_size.len())
                     );
