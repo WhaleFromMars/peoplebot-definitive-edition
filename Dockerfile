@@ -58,12 +58,14 @@ WORKDIR /app
 # Copy Rust binary
 COPY --from=builder /app/target/release/peoplebot ./app
 
+# yt_dlp install
 RUN wget -O /usr/local/bin/yt-dlp \
     https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_TAG}/yt-dlp_linux && \
     chmod +x /usr/local/bin/yt-dlp
 
-RUN "yt-dlp --version" # confirm its available
+RUN yt-dlp --version # confirm its available
 
+# FFmpeg install
 RUN wget -O /tmp/${FFMPEG_BUILD}.tar.xz \
     https://github.com/BtbN/FFmpeg-Builds/releases/download/${FFMPEG_TAG}/${FFMPEG_BUILD}.tar.xz && \
     tar -xf /tmp/${FFMPEG_BUILD}.tar.xz -C /tmp && \
@@ -71,9 +73,9 @@ RUN wget -O /tmp/${FFMPEG_BUILD}.tar.xz \
     chmod +x /usr/local/bin/ffmpeg && \
     rm -rf /tmp/${FFMPEG_BUILD}*
 
-RUN "ffmpeg -version" # confirm its available
+RUN ffmpeg -version # confirm its available
 
-# Download and install Deno
+# Deno Install
 RUN curl -fsSL "https://github.com/denoland/deno/releases/download/${DENO}/deno-x86_64-unknown-linux-gnu.zip" -o deno.zip \
     && unzip deno.zip \
     && mv deno /usr/local/bin/deno \
@@ -81,6 +83,6 @@ RUN curl -fsSL "https://github.com/denoland/deno/releases/download/${DENO}/deno-
     && rm deno.zip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN deno --version
+RUN deno --version # confirm its available
 
 ENTRYPOINT ["./app"]
