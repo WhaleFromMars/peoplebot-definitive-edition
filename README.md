@@ -1,7 +1,8 @@
 ## PeopleBot - Definitive Edition
 Currently builds against:
 - ffmpeg - 8.0
-- yt_dlp - 2025.10.22
+- yt_dlp - 2025.11.12
+- Deno - v2.5.6
 
 ## Releases
 
