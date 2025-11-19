@@ -76,12 +76,11 @@ RUN wget -O /tmp/${FFMPEG_BUILD}.tar.xz \
 RUN ffmpeg -version # confirm its available
 
 # Deno Install
-RUN curl -fsSL "https://github.com/denoland/deno/releases/download/${DENO}/deno-x86_64-unknown-linux-gnu.zip" -o deno.zip \
+RUN wget -q "https://dl.deno.land/release/${DENO}/deno-x86_64-unknown-linux-gnu.zip" -O deno.zip \
     && unzip deno.zip \
     && mv deno /usr/local/bin/deno \
     && chmod +x /usr/local/bin/deno \
-    && rm deno.zip \
-    && rm -rf /var/lib/apt/lists/*
+    && rm deno.zip
 
 RUN deno --version # confirm its available
 
