@@ -59,9 +59,12 @@ pub const BASE_ARGS: &[&str] = &[
     "--progress-delta",
     "3", //only report progress changes every 3 seconds
     "--format-sort",
-    "ext:mp4,res:1440,fps",
+    "vcodec:h264,acodec:m4a,ext:mp4,res:1440,fps",
     "--recode-video", //we can remux if theres ever a conditional "only recode if remux failed" in future
     "mp4",
+    // Compression and Dings
+    "--postprocessor-args",
+    "ffmpeg:-vf scale=-2:720 -c:v libx264 -crf 28 -preset slow -pix_fmt yuv420p -profile:v high -c:a aac -b:a 96k -movflags +faststart",
     //start & progress events for downloading and post-processing
     "--print",
     r#"before_dl:{"event":"DLStarted","id":"%(id)s"}"#,
@@ -75,8 +78,6 @@ pub const BASE_ARGS: &[&str] = &[
     "--print",
     r#"after_move:{"event":"Finished","id":"%(id)s","path":%(filepath)j}"#,
 ];
-
-const FORMAT_ARGS: &[&str] = &["-f", "bv*+ba/b"];
 
 pub fn yt_dlp_storage_args() -> (String, String) {
     let home = EMBEDDER_HOME_DIR
@@ -109,7 +110,6 @@ async fn download(request: DownloadRequest) -> Result<()> {
         .arg(home_arg)
         .arg("-P")
         .arg(temp_arg)
-        .args(FORMAT_ARGS)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
