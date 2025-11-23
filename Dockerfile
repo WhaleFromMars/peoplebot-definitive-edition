@@ -1,9 +1,9 @@
 # PINNED Versions:
 # yt-dlp binary (static)
 ARG YTDLP_TAG=2025.11.12
-# FFmpeg static binary
-ARG FFMPEG_BUILD=ffmpeg-n8.0-32-g44bfe0da61-linux64-gpl-8.0
-ARG FFMPEG_TAG=autobuild-2025-11-08-13-04
+# FFmpeg static binary (master latest build)
+ARG FFMPEG_BUILD=ffmpeg-master-latest-linux64-gpl
+ARG FFMPEG_TAG=latest
 # Deno for yt_dlps youtube functionality
 ARG DENO=v2.5.6
 
